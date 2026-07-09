@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="32" viewBox="0 0 140 32" role="img" aria-label="ShopKit logo">
+  <path d="M6 10h20l-2 16a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2L6 10z" fill="#2563EB"/>
+  <path d="M11 10a5 5 0 0 1 10 0" fill="none" stroke="#2563EB" stroke-width="2"/>
+  <text x="34" y="23" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#1A1A1A">ShopKit</text>
+</svg>
