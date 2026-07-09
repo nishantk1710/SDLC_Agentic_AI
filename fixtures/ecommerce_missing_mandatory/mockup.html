@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Commerce Shop — Design Mockup (C1 · C2 · C3 · C5, owner M3)</title>
+<style>
+/* ============================================================
+   TOKENS — every value below mirrors tokens.json (C6) exactly.
+   Do not introduce colours/sizes that are not in tokens.json.
+   ============================================================ */
+:root {
+  --color-primary: #2563EB;
+  --color-primary-hover: #225BD8;   /* primary darkened 8% (×0.92/channel) */
+  --color-error: #C0392B;
+  --color-error-hover: #B13428;     /* error darkened 8% */
+  --color-text: #1A1A1A;
+  --color-text-secondary: #6B7280;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F9FAFB;
+  --color-border: #E5E7EB;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-disabled-bg: #E5E7EB;
+  --color-disabled-text: #9CA3AF;
+  --color-focus-ring: #93C5FD;
+  --color-on-primary: #FFFFFF;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+  --font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --shadow-card: 0 1px 3px rgba(26, 26, 26, 0.08);
+  --shadow-modal: 0 8px 24px rgba(26, 26, 26, 0.16);
+}
+/* Production loads Inter via @fontsource-variable/inter; this self-contained
+   mockup falls back to the system stack when Inter is not installed. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family);
+  font-size: 16px; line-height: 24px;            /* token font.body */
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+h1 { font-size: 28px; line-height: 34px; font-weight: 700; }   /* token font.h1 */
+h2 { font-size: 22px; line-height: 28px; font-weight: 600; }   /* token font.h2 */
+h3 { font-size: 18px; line-height: 24px; font-weight: 600; }   /* token font.h3 */
+.small { font-size: 14px; line-height: 20px; }                 /* token font.small */
+.muted { color: var(--color-text-secondary); }
+a { color: var(--color-primary); }
+a:hover { color: var(--color-primary-hover); }                 /* hover darken 8% */
+
+/* ---------- mockup chrome (not part of the app) ---------- */
+.toc {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--color-text); padding: var(--space-sm) var(--space-md);
+  display: flex; flex-wrap: wrap; gap: var(--space-sm);
+}
+.toc a { color: var(--color-surface); font-size: 14px; line-height: 20px; text-decoration: none;
+  padding: 0 var(--space-sm); border-radius: var(--radius-md); }
+.toc a:hover { background: var(--color-text-secondary); color: var(--color-surface); }
+.screen { max-width: 1200px; margin: 0 auto; padding: var(--space-lg) var(--space-md); }
+.screen > h2.mock-title {
+  color: var(--color-text-secondary); font-size: 14px; line-height: 20px; font-weight: 400;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: var(--space-sm);
+}
+.frame { background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card); }
+.annot {
+  margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface); border: 1px dashed var(--color-primary);
+  border-radius: var(--radius-md); font-size: 14px; line-height: 20px;
+  color: var(--color-text-secondary);
+}
+.annot b { color: var(--color-primary); }
+
+/* ---------- app header / footer (shared chrome, C2) ---------- */
+.app-header {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface); border-bottom: 1px solid var(--color-border);
+}
+.logo { font-weight: 700; font-size: 18px; line-height: 24px; color: var(--color-primary);
+  text-decoration: none; white-space: nowrap; }
+.nav { display: none; gap: var(--space-md); margin-left: auto; align-items: center; }
+.nav a { text-decoration: none; color: var(--color-text); }
+.nav a:hover { color: var(--color-primary-hover); }
+.hamburger { margin-left: auto; }
+.cart-link { position: relative; text-decoration: none; }
+.cart-count {
+  display: inline-block; min-width: 20px; text-align: center;
+  background: var(--color-primary); color: var(--color-on-primary);
+  border-radius: var(--radius-pill); font-size: 14px; line-height: 20px;
+  padding: 0 var(--space-sm);
+}
+.app-footer { padding: var(--space-md); border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary); font-size: 14px; line-height: 20px; text-align: center; }
+.content { padding: var(--space-lg) var(--space-md); }
+
+/* At Tablet+ the inline nav appears and the hamburger hides (NFR-005). */
+@media (min-width: 376px) {
+  .nav { display: flex; }
+  .hamburger { display: none; }
+}
+
+/* ---------- buttons (C2) ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  font: inherit; font-weight: 600; cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md); border: 1px solid transparent;
+  transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+}
+.btn:active { transform: scale(0.98); }               /* click scale 0.98 */
+.btn:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 1px; }
+.btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
+.btn-primary:hover, .btn-primary.is-hover { background: var(--color-primary-hover); } /* darken 8% */
+.btn-secondary { background: var(--color-surface); color: var(--color-primary);
+  border-color: var(--color-primary); }
+.btn-secondary:hover, .btn-secondary.is-hover { color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover); background: var(--color-surface-alt); }
+.btn-ghost { background: transparent; color: var(--color-primary); }
+.btn-ghost:hover, .btn-ghost.is-hover { background: var(--color-surface-alt);
+  color: var(--color-primary-hover); }
+.btn-danger { background: var(--color-error); color: var(--color-on-primary); }
+.btn-danger:hover { background: var(--color-error-hover); }
+.btn:disabled, .btn.is-disabled {
+  background: var(--color-disabled-bg); color: var(--color-disabled-text);
+  border-color: transparent; cursor: not-allowed; transform: none;
+}
+.btn.is-loading { pointer-events: none; }
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: spin 800ms linear infinite;               /* token motion.spinnerRotationMs */
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- inputs (C2) ---------- */
+.field { margin-bottom: var(--space-md); max-width: 420px; }
+.field label { display: block; font-size: 14px; line-height: 20px; font-weight: 600;
+  margin-bottom: var(--space-sm); }
+.input {
+  width: 100%; font: inherit; color: var(--color-text);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.input:focus, .input.is-focus { outline: none; border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring); }
+.input.is-error { border-color: var(--color-error); }
+.input:disabled, .input.is-disabled { background: var(--color-disabled-bg);
+  color: var(--color-disabled-text); cursor: not-allowed; }
+.field-error { color: var(--color-error); font-size: 14px; line-height: 20px;
+  margin-top: var(--space-sm); }
+.field-hint { color: var(--color-text-secondary); font-size: 14px; line-height: 20px;
+  margin-top: var(--space-sm); }
+
+/* ---------- card / banner / toast / badge / pagination (C2) ---------- */
+.card { background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-md); }
+.banner-error { background: var(--color-surface); border: 1px solid var(--color-error);
+  border-left: 4px solid var(--color-error); color: var(--color-error);
+  border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md); }
+.toast {
+  display: inline-flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md);
+  color: var(--color-on-primary); box-shadow: var(--shadow-modal);
+}
+.toast-success { background: var(--color-success); }
+.toast-error { background: var(--color-error); }
+.badge { display: inline-block; padding: 0 var(--space-sm);
+  border-radius: var(--radius-pill); font-size: 14px; line-height: 20px; font-weight: 600; }
+/* 12%-opacity tints of the status colours (tokens.json statusBadge) */
+.badge-pending   { color: var(--color-warning); background: rgba(217, 119, 6, 0.12); }
+.badge-paid, .badge-shipped { color: var(--color-primary); background: rgba(37, 99, 235, 0.12); }
+.badge-delivered { color: var(--color-success); background: rgba(22, 163, 74, 0.12); }
+.badge-cancelled { color: var(--color-error); background: rgba(192, 57, 43, 0.12); }
+.pagination { display: flex; gap: var(--space-sm); align-items: center; }
+.page-btn {
+  min-width: 40px; text-align: center; padding: var(--space-sm);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; cursor: pointer;
+}
+.page-btn:hover { border-color: var(--color-primary-hover); color: var(--color-primary-hover); }
+.page-btn.is-current { background: var(--color-primary); color: var(--color-on-primary);
+  border-color: var(--color-primary); }
+.page-btn:disabled { color: var(--color-disabled-text); background: var(--color-surface-alt);
+  cursor: not-allowed; }
+
+/* ---------- modal (C2) ---------- */
+.modal-demo-area { position: relative; min-height: 260px;
+  background: var(--color-surface-alt); border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center; padding: var(--space-lg); }
+.modal-overlay-note { position: absolute; inset: 0;
+  background: rgba(26, 26, 26, 0.5); border-radius: var(--radius-md); }
+.modal {
+  position: relative; background: var(--color-surface); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal); padding: var(--space-lg); max-width: 420px; width: 100%;
+  /* enter animation: fade + slide-up 16px over 200ms (token motion.modalTransition) */
+  animation: modal-in 200ms ease-out;
+}
+@keyframes modal-in { from { opacity: 0; transform: translateY(16px); }
+                      to   { opacity: 1; transform: translateY(0); } }
+.modal h3 { margin-bottom: var(--space-sm); }
+.modal .actions { display: flex; gap: var(--space-sm); justify-content: flex-end;
+  margin-top: var(--space-lg); }
+
+/* ---------- product grid: 1 / 2 / 4 columns (C3, NFR-005) ---------- */
+.product-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); }
+@media (min-width: 376px)  { .product-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .product-grid { grid-template-columns: repeat(4, 1fr); } }
+.product-card { display: flex; flex-direction: column; gap: var(--space-sm);
+  text-decoration: none; color: inherit; }
+.product-card:hover .p-name { color: var(--color-primary-hover); }
+.ph { display: flex; align-items: center; justify-content: center;
+  background: var(--color-surface-alt); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); color: var(--color-text-secondary);
+  font-size: 14px; line-height: 20px; min-height: 120px; text-align: center; }
+.p-name { font-weight: 600; }
+.p-price { font-weight: 700; }
+
+/* ---------- products page layout: sidebar → hamburger on Mobile ---------- */
+.products-layout { display: block; }
+.filters-sidebar { display: none; }
+.filters-toggle { display: flex; margin-bottom: var(--space-md); }
+@media (min-width: 376px) {
+  .products-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-lg); }
+  .filters-sidebar { display: block; }
+  .filters-toggle { display: none; }
+}
+
+/* ---------- cart / checkout / orders layout ---------- */
+.cart-line { display: grid; grid-template-columns: 64px 1fr auto; gap: var(--space-md);
+  align-items: center; padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-border); }
+.stepper { display: inline-flex; align-items: center; gap: var(--space-sm); }
+.stepper button { width: 32px; height: 32px; font: inherit; font-weight: 700;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); cursor: pointer; }
+.stepper button:hover { border-color: var(--color-primary-hover); color: var(--color-primary-hover); }
+.stepper button:disabled { color: var(--color-disabled-text);
+  background: var(--color-surface-alt); cursor: not-allowed; }
+.two-col { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); }
+@media (min-width: 768px) { .two-col { grid-template-columns: 1fr 360px; } }
+.summary-row { display: flex; justify-content: space-between; padding: var(--space-sm) 0; }
+.summary-total { font-weight: 700; border-top: 1px solid var(--color-border); }
+.order-row { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center;
+  justify-content: space-between; padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border); text-decoration: none; color: inherit; }
+.order-row:hover { background: var(--color-surface-alt); }
+.hero { background: var(--color-primary); color: var(--color-on-primary);
+  padding: var(--space-lg) var(--space-md); border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg); }
+.gallery-row { display: flex; flex-wrap: wrap; gap: var(--space-md);
+  align-items: center; margin-bottom: var(--space-md); }
+.gallery-block { margin-bottom: var(--space-lg); }
+.empty-state { text-align: center; padding: var(--space-lg); }
+.success-banner { display: flex; align-items: center; gap: var(--space-sm);
+  background: rgba(22, 163, 74, 0.12); color: var(--color-success);
+  border: 1px solid var(--color-success); border-radius: var(--radius-md);
+  padding: var(--space-md); margin-bottom: var(--space-lg); font-weight: 600; }
+table.lines { width: 100%; border-collapse: collapse; }
+table.lines th, table.lines td { text-align: left; padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border); }
+table.lines th { font-size: 14px; line-height: 20px; color: var(--color-text-secondary); }
+td.num, th.num { text-align: right; }
+</style>
+</head>
+<body>
+
+<nav class="toc">
+  <a href="#screen-home">Home</a><a href="#screen-login">Login</a><a href="#screen-register">Register</a>
+  <a href="#screen-products">Products</a><a href="#screen-product-details">Details</a>
+  <a href="#screen-cart">Cart</a><a href="#screen-checkout">Checkout</a>
+  <a href="#screen-order-confirmation">Confirmation</a><a href="#screen-my-orders">My Orders</a>
+  <a href="#gallery">Component gallery</a>
+</nav>
+
+<section class="screen">
+  <div class="annot"><b>How to read this mockup (C1/C5).</b> One framed section per screen (9 screens,
+  matching routes.json), then the component gallery. The dark bar above is mockup navigation, not app UI.
+  Resize the window to see the real breakpoints: Mobile ≤375px (1-column grid, hamburger),
+  Tablet 376–768px (2 columns, sidebar), Desktop ≥1024px (4 columns). All colours, spacing, radii and
+  type resolve to tokens.json. Global interaction rules: <b>hover darkens 8%</b> (precomputed hexes
+  #225BD8 / #B13428), <b>click scales to 0.98</b>, submitting buttons show a <b>spinner and disable</b>,
+  success toasts <b>auto-dismiss after 3s</b>, modals <b>fade + slide up over 200ms</b>. Error messages shown
+  below are byte-identical to validation-rules.json (NFR-007). Product data is the schema.sql seed.</div>
+</section>
+
+<!-- ==================== 1 · HOME ==================== -->
+<section class="screen" id="screen-home">
+  <h2 class="mock-title">Screen 1 · Home — route “/” (REQ-003)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart">Cart <span class="cart-count">3</span></a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <div class="hero">
+        <h1>Everyday gear, delivered.</h1>
+        <p style="margin: var(--space-sm) 0 var(--space-md);">Lamps, keyboards, mugs and more — in stock and ready to ship.</p>
+        <a class="btn btn-secondary" href="#screen-products">Browse products</a>
+      </div>
+      <h2 style="margin-bottom: var(--space-md);">New arrivals</h2>
+      <div class="product-grid">
+        <a class="product-card" href="#screen-product-details"><div class="ph">Aurora Desk Lamp<br>(image)</div><span class="p-name">Aurora Desk Lamp</span><span class="small muted">Lighting</span><span class="p-price">$49.99</span></a>
+        <a class="product-card" href="#screen-product-details"><div class="ph">Nimbus Wireless Mouse<br>(image)</div><span class="p-name">Nimbus Wireless Mouse</span><span class="small muted">Electronics</span><span class="p-price">$24.50</span></a>
+        <a class="product-card" href="#screen-product-details"><div class="ph">Atlas Laptop Stand<br>(image)</div><span class="p-name">Atlas Laptop Stand</span><span class="small muted">Accessories</span><span class="p-price">$39.00</span></a>
+        <a class="product-card" href="#screen-product-details"><div class="ph">Terra Ceramic Mug<br>(image)</div><span class="p-name">Terra Ceramic Mug</span><span class="small muted">Kitchen</span><span class="p-price">$14.25</span></a>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>listProducts?limit=4&amp;sort=newest</b>. Header shows the logged-in state
+  (cart badge = cart <b>itemCount</b>, here 3 per the sample cart). Anonymous visitors see
+  Login / Register instead of the badge, My Orders and Log out. On Mobile the nav collapses behind
+  the hamburger (menu icon in assets/icons/). Product images come from the API <b>imageUrl</b>
+  (assets/products/*.svg); this self-contained mockup uses placeholders.</div>
+</section>
+
+<!-- ==================== 2 · LOGIN ==================== -->
+<section class="screen" id="screen-login">
+  <h2 class="mock-title">Screen 2 · Login — route “/login” (REQ-002)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-login"><b>Log in</b></a>
+        <a href="#screen-register">Register</a>
+      </nav>
+    </header>
+    <div class="content" style="max-width: 480px; margin: 0 auto;">
+      <h1 style="margin-bottom: var(--space-lg);">Log in</h1>
+      <div class="banner-error">Invalid email or password.</div>
+      <div class="field">
+        <label for="li-email">Email</label>
+        <input class="input" id="li-email" type="email" value="ava.sharma@example.com">
+      </div>
+      <div class="field">
+        <label for="li-pass">Password</label>
+        <input class="input" id="li-pass" type="password" value="••••••••">
+      </div>
+      <button class="btn btn-primary" style="width: 100%;">Log in</button>
+      <p class="small muted" style="margin-top: var(--space-md);">No account yet?
+        <a href="#screen-register">Create one</a></p>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Submit → <b>loginUser</b>. While pending the button shows the loading state
+  (spinner + disabled, see gallery). 401 renders the form-level banner shown above with the exact
+  message <b>“Invalid email or password.”</b> — it never reveals which part was wrong. On success the
+  JWT is stored and the app navigates to <b>?next</b> or “/”.</div>
+</section>
+
+<!-- ==================== 3 · REGISTER ==================== -->
+<section class="screen" id="screen-register">
+  <h2 class="mock-title">Screen 3 · Register — route “/register” (REQ-001) — shown in error state</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-login">Log in</a>
+        <a href="#screen-register"><b>Register</b></a>
+      </nav>
+    </header>
+    <div class="content" style="max-width: 480px; margin: 0 auto;">
+      <h1 style="margin-bottom: var(--space-lg);">Create your account</h1>
+      <div class="field">
+        <label for="rg-name">Full name</label>
+        <input class="input" id="rg-name" type="text" value="Ava Sharma">
+      </div>
+      <div class="field">
+        <label for="rg-email">Email</label>
+        <input class="input is-error" id="rg-email" type="email" value="ava.sharma@example.com">
+        <p class="field-error">An account with this email already exists.</p>
+      </div>
+      <div class="field">
+        <label for="rg-pass">Password</label>
+        <input class="input is-error" id="rg-pass" type="password" value="•••••">
+        <p class="field-error">Password must be at least 8 characters.</p>
+        <p class="field-hint">8–72 characters, with at least one letter and one number.</p>
+      </div>
+      <button class="btn btn-primary" style="width: 100%;">Create account</button>
+      <p class="small muted" style="margin-top: var(--space-md);">Already registered?
+        <a href="#screen-login">Log in</a></p>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Submit → <b>registerUser</b>; 201 signs the user in immediately. Inline errors appear
+  under their fields on blur and on submit, using validation-rules.json messages verbatim — shown here:
+  409 <b>EMAIL_TAKEN</b> (“An account with this email already exists.”) and minLength
+  (“Password must be at least 8 characters.”). Other texts: “Full name is required.”,
+  “Full name must be between 2 and 100 characters.”, “Email is required.”, “Enter a valid email address.”,
+  “Email must be 255 characters or fewer.”, “Password is required.”, “Password must be 72 characters or
+  fewer.”, “Password must contain at least one letter and one number.”</div>
+</section>
+
+<!-- ==================== 4 · PRODUCTS ==================== -->
+<section class="screen" id="screen-products">
+  <h2 class="mock-title">Screen 4 · Products — route “/products” (REQ-003)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products"><b>Products</b></a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart">Cart <span class="cart-count">3</span></a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <h1 style="margin-bottom: var(--space-md);">Products</h1>
+      <button class="btn btn-secondary filters-toggle">☰ Filters &amp; sort</button>
+      <div class="products-layout">
+        <aside class="filters-sidebar">
+          <div class="field">
+            <label for="pr-search">Search</label>
+            <input class="input" id="pr-search" type="search" placeholder="Search products…">
+          </div>
+          <h3 style="margin-bottom: var(--space-sm);">Category</h3>
+          <p><a href="#screen-products"><b>All</b></a></p>
+          <p><a href="#screen-products">Accessories</a></p>
+          <p><a href="#screen-products">Electronics</a></p>
+          <p><a href="#screen-products">Kitchen</a></p>
+          <p><a href="#screen-products">Lighting</a></p>
+          <p style="margin-bottom: var(--space-md);"><a href="#screen-products">Stationery</a></p>
+          <div class="field">
+            <label for="pr-sort">Sort by</label>
+            <select class="input" id="pr-sort">
+              <option>Newest</option><option>Price: low to high</option>
+              <option>Price: high to low</option><option>Name: A–Z</option><option>Name: Z–A</option>
+            </select>
+          </div>
+        </aside>
+        <div>
+          <div class="product-grid">
+            <a class="product-card" href="#screen-product-details"><div class="ph">Aurora Desk Lamp<br>(image)</div><span class="p-name">Aurora Desk Lamp</span><span class="small muted">Lighting</span><span class="p-price">$49.99</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Nimbus Wireless Mouse<br>(image)</div><span class="p-name">Nimbus Wireless Mouse</span><span class="small muted">Electronics</span><span class="p-price">$24.50</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Atlas Laptop Stand<br>(image)</div><span class="p-name">Atlas Laptop Stand</span><span class="small muted">Accessories</span><span class="p-price">$39.00</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Terra Ceramic Mug<br>(image)</div><span class="p-name">Terra Ceramic Mug</span><span class="small muted">Kitchen</span><span class="p-price">$14.25</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Zephyr Mechanical Keyboard<br>(image)</div><span class="p-name">Zephyr Mechanical Keyboard</span><span class="small muted">Electronics</span><span class="p-price">$89.99</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Luna Notebook Set<br>(image)</div><span class="p-name">Luna Notebook Set</span><span class="small muted">Stationery</span><span class="p-price">$12.75</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Orion USB-C Hub<br>(image)</div><span class="p-name">Orion USB-C Hub</span><span class="small muted">Electronics</span><span class="p-price">$34.99</span></a>
+            <a class="product-card" href="#screen-product-details"><div class="ph">Sol Water Bottle<br>(image)</div><span class="p-name">Sol Water Bottle</span><span class="small muted">Kitchen</span><span class="p-price">$19.99</span></a>
+          </div>
+          <div class="pagination" style="margin-top: var(--space-lg); justify-content: center;">
+            <button class="page-btn" disabled>‹</button>
+            <button class="page-btn is-current">1</button>
+            <button class="page-btn" disabled>›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot"><b>Breakpoint behaviour (C3, NFR-005):</b> the grid is 1 column ≤375px,
+  2 columns 376–1023px, 4 columns ≥1024px — implemented with real media queries in this file; resize to
+  verify. On Mobile the sidebar is replaced by the “☰ Filters &amp; sort” button, which opens the filter
+  set in a drawer (same fade + slide-up 200ms as the modal). Search/category/sort/pagination all call
+  <b>listProducts</b> with query params; empty result renders “No products match your search.” + Clear
+  filters. Prev/next pagination buttons are disabled on a single page (state shown).</div>
+</section>
+
+<!-- ==================== 5 · PRODUCT DETAILS ==================== -->
+<section class="screen" id="screen-product-details">
+  <h2 class="mock-title">Screen 5 · Product Details — route “/products/:productId” (REQ-004, REQ-005)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products"><b>Products</b></a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart">Cart <span class="cart-count">3</span></a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <p class="small" style="margin-bottom: var(--space-md);"><a href="#screen-products">Products</a>
+        <span class="muted">/ Electronics / Nimbus Wireless Mouse</span></p>
+      <div class="two-col">
+        <div class="ph" style="min-height: 280px;">Nimbus Wireless Mouse<br>(image — /assets/products/nimbus-wireless-mouse.svg)</div>
+        <div>
+          <h1>Nimbus Wireless Mouse</h1>
+          <p class="small muted" style="margin-bottom: var(--space-sm);">Electronics</p>
+          <p class="p-price" style="font-size: 22px; line-height: 28px; margin-bottom: var(--space-sm);">$24.50</p>
+          <p class="small" style="color: var(--color-success); margin-bottom: var(--space-md);">✓ In stock (200 available)</p>
+          <p style="margin-bottom: var(--space-lg);">Silent-click ergonomic wireless mouse, 2.4&nbsp;GHz USB receiver, 18-month battery life.</p>
+          <div class="gallery-row">
+            <span class="stepper">
+              <button aria-label="Decrease" disabled>−</button>
+              <span style="min-width: 32px; text-align: center;">1</span>
+              <button aria-label="Increase">+</button>
+            </span>
+            <button class="btn btn-primary">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>getProduct</b>; unknown id renders the full-page state
+  “Product not found.”. The stepper is clamped to 1…min(99, stockQuantity) — “−” is disabled at 1
+  (shown), “+” disables at the cap, so BR-003 violations are unreachable in the UI. <b>Add to Cart</b>
+  → anonymous users are redirected to /login?next=…; logged-in: button enters
+  <b>loading (spinner + disabled)</b>, then success toast <b>“Added to cart.”</b> (auto-dismiss 3s) and the
+  header badge updates from the returned cart. Out-of-stock race → error toast, e.g. <b>“Only 3 left in stock.”</b></div>
+</section>
+
+<!-- ==================== 6 · CART ==================== -->
+<section class="screen" id="screen-cart">
+  <h2 class="mock-title">Screen 6 · Cart — route “/cart”, auth required (REQ-006 · 007 · 008)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart"><b>Cart</b> <span class="cart-count">3</span></a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <h1 style="margin-bottom: var(--space-md);">Your cart</h1>
+      <div class="two-col">
+        <div>
+          <div class="cart-line">
+            <div class="ph" style="min-height: 64px;">img</div>
+            <div>
+              <p class="p-name">Nimbus Wireless Mouse</p>
+              <p class="small muted">$24.50 each</p>
+              <span class="stepper" style="margin-top: var(--space-sm);">
+                <button aria-label="Decrease">−</button>
+                <span style="min-width: 32px; text-align: center;">2</span>
+                <button aria-label="Increase">+</button>
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <p class="p-price">$49.00</p>
+              <button class="btn btn-ghost" aria-label="Remove Nimbus Wireless Mouse">🗑</button>
+            </div>
+          </div>
+          <div class="cart-line" style="border-bottom: none;">
+            <div class="ph" style="min-height: 64px;">img</div>
+            <div>
+              <p class="p-name">Terra Ceramic Mug</p>
+              <p class="small muted">$14.25 each</p>
+              <span class="stepper" style="margin-top: var(--space-sm);">
+                <button aria-label="Decrease" disabled>−</button>
+                <span style="min-width: 32px; text-align: center;">1</span>
+                <button aria-label="Increase">+</button>
+              </span>
+            </div>
+            <div style="text-align: right;">
+              <p class="p-price">$14.25</p>
+              <button class="btn btn-ghost" aria-label="Remove Terra Ceramic Mug">🗑</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="align-self: start;">
+          <h3 style="margin-bottom: var(--space-sm);">Summary</h3>
+          <div class="summary-row"><span>Subtotal (3 items)</span><b>$63.25</b></div>
+          <div class="summary-row"><span class="small muted">Shipping (flat)</span><span class="small muted">added at checkout</span></div>
+          <a class="btn btn-primary" style="width: 100%; margin-top: var(--space-md);" href="#screen-checkout">Proceed to Checkout</a>
+        </div>
+      </div>
+
+      <h3 style="margin: var(--space-lg) 0 var(--space-sm);">Remove-item confirmation (modal state)</h3>
+      <div class="modal-demo-area">
+        <div class="modal-overlay-note"></div>
+        <div class="modal">
+          <h3>Remove item?</h3>
+          <p>Remove <b>Terra Ceramic Mug</b> from your cart?</p>
+          <div class="actions">
+            <button class="btn btn-secondary">Cancel</button>
+            <button class="btn btn-danger">Remove</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin: var(--space-lg) 0 var(--space-sm);">Empty-cart state</h3>
+      <div class="card empty-state">
+        <p style="font-size: 22px; line-height: 28px; margin-bottom: var(--space-sm);">🛒</p>
+        <h3 style="margin-bottom: var(--space-sm);">Your cart is empty.</h3>
+        <a class="btn btn-primary" href="#screen-products">Browse products</a>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>getCart</b>. Stepper changes → <b>updateCartItem</b>; totals re-render from the
+  response (never computed client-side). Trash icon opens the confirm modal, which <b>fades + slides up
+  16px over 200ms</b> (animation implemented above); Cancel closes with no request, Remove →
+  <b>removeCartItem</b> + toast “Item removed.”. Line data matches the sample cart: 2 × $24.50 + 1 × $14.25
+  = <b>$63.25</b>, badge itemCount 3. Checkout button is disabled when the cart is empty (BR-004).</div>
+</section>
+
+<!-- ==================== 7 · CHECKOUT ==================== -->
+<section class="screen" id="screen-checkout">
+  <h2 class="mock-title">Screen 7 · Checkout — route “/checkout”, auth required (REQ-009)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart">Cart <span class="cart-count">3</span></a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <h1 style="margin-bottom: var(--space-md);">Checkout</h1>
+      <div class="two-col">
+        <div>
+          <h3 style="margin-bottom: var(--space-md);">Shipping address</h3>
+          <div class="field">
+            <label for="ck-name">Recipient name</label>
+            <input class="input" id="ck-name" type="text" value="Ava Sharma">
+          </div>
+          <div class="field">
+            <label for="ck-l1">Address line 1</label>
+            <input class="input" id="ck-l1" type="text" value="42 Marine Drive">
+          </div>
+          <div class="field">
+            <label for="ck-l2">Address line 2 <span class="muted small">(optional)</span></label>
+            <input class="input" id="ck-l2" type="text" value="Apt 7B">
+          </div>
+          <div class="field">
+            <label for="ck-city">City</label>
+            <input class="input" id="ck-city" type="text" value="Mumbai">
+          </div>
+          <div class="field">
+            <label for="ck-postal">Postal code</label>
+            <input class="input is-error" id="ck-postal" type="text" value="!!">
+            <p class="field-error">Enter a valid postal code.</p>
+          </div>
+          <div class="field">
+            <label for="ck-country">Country</label>
+            <input class="input" id="ck-country" type="text" value="IN" maxlength="2">
+            <p class="field-hint">2-letter country code, e.g. US.</p>
+          </div>
+        </div>
+        <div class="card" style="align-self: start;">
+          <h3 style="margin-bottom: var(--space-sm);">Order summary</h3>
+          <div class="summary-row"><span class="small">Nimbus Wireless Mouse × 2</span><span class="small">$49.00</span></div>
+          <div class="summary-row"><span class="small">Terra Ceramic Mug × 1</span><span class="small">$14.25</span></div>
+          <div class="summary-row"><span>Subtotal</span><span>$63.25</span></div>
+          <div class="summary-row"><span>Shipping</span><span>$5.00</span></div>
+          <div class="summary-row summary-total"><span>Total</span><span>$68.25</span></div>
+          <button class="btn btn-primary is-loading" style="width: 100%; margin-top: var(--space-md);" disabled>
+            <span class="spinner"></span> Placing order…
+          </button>
+        </div>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>getCart</b> for the summary (redirects to /cart if empty). The Place Order
+  button is shown in its <b>loading state</b>: spinner + disabled while <b>placeOrder</b> is in flight.
+  Postal-code field is shown in error state with the exact message <b>“Enter a valid postal code.”</b>;
+  other field texts come from validation-rules.json `checkout`. Flat shipping $5.00 (BR-006):
+  63.25 + 5.00 = <b>68.25</b>. 409 responses render a page-top error banner:
+  <b>“Your cart is empty. Add items before checking out.”</b> (CART_EMPTY) or
+  <b>“Only 2 left in stock for Terra Ceramic Mug.”</b> (INSUFFICIENT_STOCK). On 201 the app navigates to
+  the confirmation screen and shows the toast “Order placed.”.</div>
+</section>
+
+<!-- ==================== 8 · ORDER CONFIRMATION ==================== -->
+<section class="screen" id="screen-order-confirmation">
+  <h2 class="mock-title">Screen 8 · Order Confirmation / Details — route “/orders/:orderId”, auth required (REQ-011)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-my-orders">My Orders</a>
+        <a class="cart-link" href="#screen-cart">Cart</a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <div class="success-banner">✓ Thank you! Your order has been placed.</div>
+      <div class="gallery-row" style="justify-content: space-between;">
+        <h1>Order ORD-000042</h1>
+        <span class="badge badge-pending">PENDING</span>
+      </div>
+      <p class="small muted" style="margin-bottom: var(--space-lg);">Placed 9 July 2026, 10:30 UTC</p>
+      <div class="two-col">
+        <div class="card">
+          <table class="lines">
+            <thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit</th><th class="num">Total</th></tr></thead>
+            <tbody>
+              <tr><td>Nimbus Wireless Mouse</td><td class="num">2</td><td class="num">$24.50</td><td class="num">$49.00</td></tr>
+              <tr><td>Terra Ceramic Mug</td><td class="num">1</td><td class="num">$14.25</td><td class="num">$14.25</td></tr>
+            </tbody>
+          </table>
+          <div class="summary-row" style="margin-top: var(--space-sm);"><span>Subtotal</span><span>$63.25</span></div>
+          <div class="summary-row"><span>Shipping</span><span>$5.00</span></div>
+          <div class="summary-row summary-total"><span>Total</span><span>$68.25</span></div>
+        </div>
+        <div class="card" style="align-self: start;">
+          <h3 style="margin-bottom: var(--space-sm);">Shipping to</h3>
+          <p>Ava Sharma<br>42 Marine Drive, Apt 7B<br>Mumbai 400020<br>IN</p>
+          <a class="btn btn-secondary" style="width: 100%; margin-top: var(--space-md);" href="#screen-my-orders">View all orders</a>
+        </div>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>getOrder</b>. The green “Thank you” banner appears only when navigated from
+  checkout; opened from My Orders the same screen acts as plain order details. Item names/prices are the
+  BR-005 <b>snapshots</b> from order_items. Status renders as a Badge (PENDING → warning colour, mapping in
+  state-transitions.md §1). Unknown or another user's order id renders the full-page state
+  <b>“Order not found.”</b> (404 — never 403). Cart badge is gone: checkout emptied the cart (BR-004).</div>
+</section>
+
+<!-- ==================== 9 · MY ORDERS ==================== -->
+<section class="screen" id="screen-my-orders">
+  <h2 class="mock-title">Screen 9 · My Orders — route “/orders”, auth required (REQ-010)</h2>
+  <div class="frame">
+    <header class="app-header">
+      <button class="btn btn-ghost hamburger" aria-label="Menu">☰</button>
+      <a class="logo" href="#screen-home">◆ ShopKit</a>
+      <nav class="nav">
+        <a href="#screen-products">Products</a>
+        <a href="#screen-my-orders"><b>My Orders</b></a>
+        <a class="cart-link" href="#screen-cart">Cart</a>
+        <a href="#screen-home">Log out</a>
+      </nav>
+    </header>
+    <div class="content">
+      <h1 style="margin-bottom: var(--space-md);">My orders</h1>
+      <div class="card" style="padding: 0;">
+        <a class="order-row" href="#screen-order-confirmation">
+          <span><b>ORD-000042</b><br><span class="small muted">9 July 2026 · 3 items</span></span>
+          <span class="badge badge-pending">PENDING</span>
+          <b>$68.25</b>
+        </a>
+        <a class="order-row" style="border-bottom: none;" href="#screen-order-confirmation">
+          <span><b>ORD-000017</b><br><span class="small muted">20 June 2026 · 1 item</span></span>
+          <span class="badge badge-delivered">DELIVERED</span>
+          <b>$54.99</b>
+        </a>
+      </div>
+      <div class="pagination" style="margin-top: var(--space-lg); justify-content: center;">
+        <button class="page-btn" disabled>‹</button>
+        <button class="page-btn is-current">1</button>
+        <button class="page-btn" disabled>›</button>
+      </div>
+    </div>
+    <footer class="app-footer">ShopKit — design-pack fixture. © 2026</footer>
+  </div>
+  <div class="annot">Loads <b>listOrders</b> (newest first, 10/page). Rows link to the order's
+  confirmation/details screen. Data matches sample-payloads.json: ORD-000042 PENDING $68.25 (3 items),
+  ORD-000017 DELIVERED $54.99 (1 item). Empty state: “You haven't placed any orders yet.” + Browse
+  products.</div>
+</section>
+
+<!-- ==================== COMPONENT GALLERY (C2) ==================== -->
+<section class="screen" id="gallery">
+  <h2 class="mock-title">Component gallery (C2) — canonical states for every shared component</h2>
+  <div class="frame"><div class="content">
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Buttons — variants × states</h2>
+      <div class="gallery-row">
+        <button class="btn btn-primary">Primary</button>
+        <button class="btn btn-primary is-hover">Primary · hover</button>
+        <button class="btn btn-primary" disabled>Primary · disabled</button>
+        <button class="btn btn-primary is-loading" disabled><span class="spinner"></span> Loading…</button>
+      </div>
+      <div class="gallery-row">
+        <button class="btn btn-secondary">Secondary</button>
+        <button class="btn btn-secondary is-hover">Secondary · hover</button>
+        <button class="btn btn-secondary" disabled>Secondary · disabled</button>
+        <button class="btn btn-secondary is-loading" disabled><span class="spinner"></span> Loading…</button>
+      </div>
+      <div class="gallery-row">
+        <button class="btn btn-ghost">Ghost</button>
+        <button class="btn btn-ghost is-hover">Ghost · hover</button>
+        <button class="btn btn-ghost" disabled>Ghost · disabled</button>
+        <button class="btn btn-ghost is-loading" disabled><span class="spinner"></span> Loading…</button>
+      </div>
+      <div class="annot"><b>Interaction rules (C5):</b> hover = background/text darkened <b>8%</b>
+      (#2563EB → #225BD8, #C0392B → #B13428 — precomputed in tokens.json); pressing scales the button to
+      <b>0.98</b> (try it: these are live CSS states); loading = spinner (800ms rotation) + disabled +
+      pointer-events none; disabled = disabledBg/disabledText tokens, no hover, cursor not-allowed.
+      Focus (keyboard) shows a 3px focusRing outline.</div>
+    </div>
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Inputs</h2>
+      <div class="field"><label>Default</label><input class="input" placeholder="Placeholder text"></div>
+      <div class="field"><label>Focus</label><input class="input is-focus" value="Focused value"></div>
+      <div class="field"><label>Error</label><input class="input is-error" value="wrong value">
+        <p class="field-error">Enter a valid email address.</p></div>
+      <div class="field"><label>Disabled</label><input class="input" value="Can't touch this" disabled></div>
+    </div>
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Card</h2>
+      <div class="card" style="max-width: 360px;">
+        <h3 style="margin-bottom: var(--space-sm);">Card title</h3>
+        <p class="small muted">Cards wrap products, summaries and empty states. Radius 8px, border token,
+        card elevation shadow, padding 16px.</p>
+      </div>
+    </div>
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Modal</h2>
+      <div class="modal-demo-area">
+        <div class="modal-overlay-note"></div>
+        <div class="modal">
+          <h3>Modal title</h3>
+          <p>Overlay is text-colour at 50% opacity. Enters with <b>fade + slide-up 16px over 200ms</b>
+          (ease-out); exits with the reverse. Escape and the Cancel button close it.</p>
+          <div class="actions">
+            <button class="btn btn-secondary">Cancel</button>
+            <button class="btn btn-primary">Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Toast</h2>
+      <div class="gallery-row">
+        <span class="toast toast-success">✓ Added to cart.</span>
+        <span class="toast toast-error">✕ Only 3 left in stock.</span>
+      </div>
+      <div class="annot">Toasts stack top-right (top-center on Mobile). <b>Success toasts auto-dismiss
+      after 3000ms</b> (token motion.toastAutoDismissMs); error toasts stay until dismissed. Texts are
+      always the exact API messages (NFR-007).</div>
+    </div>
+
+    <div class="gallery-block">
+      <h2 style="margin-bottom: var(--space-md);">Badge</h2>
+      <div class="gallery-row">
+        <span class="badge badge-pending">PENDING</span>
+        <span class="badge badge-paid">PAID</span>
+        <span class="badge badge-shipped">SHIPPED</span>
+        <span class="badge badge-delivered">DELIVERED</span>
+        <span class="badge badge-cancelled">CANCELLED</span>
+        <span class="cart-count">3</span>
+      </div>
+      <div class="annot">Order-status colours per state-transitions.md §1 (12% tint background, pill
+      radius). The blue pill is the header cart counter (itemCount).</div>
+    </div>
+
+    <div class="gallery-block" style="margin-bottom: 0;">
+      <h2 style="margin-bottom: var(--space-md);">Pagination</h2>
+      <div class="pagination">
+        <button class="page-btn" disabled>‹</button>
+        <button class="page-btn is-current">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">›</button>
+      </div>
+      <div class="annot">Current page = primary background; prev/next disable at the edges; hover
+      darkens 8% via the border/text colour. Drives the `page` query param.</div>
+    </div>
+
+  </div></div>
+</section>
+
+<footer class="screen small muted" style="text-align: center;">
+  mockup.html — design-pack artifacts C1 (screens) · C2 (components) · C3 (responsive) · C5 (interaction
+  annotations) · owner M3 · tokens: tokens.json (C6) · self-contained: no external requests.
+</footer>
+
+</body>
+</html>

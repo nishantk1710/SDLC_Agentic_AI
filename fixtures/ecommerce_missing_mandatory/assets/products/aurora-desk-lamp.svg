@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" role="img" aria-label="Aurora Desk Lamp placeholder product image">
+  <rect width="400" height="300" fill="#F9FAFB"/>
+  <rect x="1" y="1" width="398" height="298" fill="none" stroke="#E5E7EB" stroke-width="2" rx="8"/>
+  <rect width="400" height="8" fill="#2563EB"/>
+  <text x="200" y="150" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" font-weight="600" fill="#1A1A1A">Aurora Desk Lamp</text>
+  <text x="200" y="178" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" fill="#6B7280">placeholder product image</text>
+</svg>

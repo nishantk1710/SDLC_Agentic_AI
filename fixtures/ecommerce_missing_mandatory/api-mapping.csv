@@ -1,0 +1,16 @@
+route_id,screen,trigger,http_method,endpoint_path,operation_id,req_ids,notes
+home,Home,page load,GET,/products?limit=4&sort=newest,listProducts,REQ-003,new-arrivals strip: first 4 products
+login,Login,submit Log in,POST,/auth/login,loginUser,REQ-002,401 shows form-level 'Invalid email or password.'
+register,Register,submit Create account,POST,/auth/register,registerUser,REQ-001,409 EMAIL_TAKEN shown inline on email field
+products,Products,page load / filter / search / sort / pagination,GET,/products,listProducts,REQ-003,query params: page limit search category sort
+product-details,Product Details,page load,GET,/products/{productId},getProduct,REQ-004,404 renders 'Product not found.' state
+product-details,Product Details,click Add to Cart,POST,/cart/items,addCartItem,REQ-005,body {productId quantity}; 201 returns full cart; toast 'Added to cart.'
+cart,Cart,page load,GET,/cart,getCart,REQ-006,empty cart renders empty state
+cart,Cart,quantity stepper change,PATCH,/cart/items/{itemId},updateCartItem,REQ-007,body {quantity}; re-render totals from response
+cart,Cart,confirm Remove in modal,DELETE,/cart/items/{itemId},removeCartItem,REQ-008,modal fade+slide-up 200ms; toast 'Item removed.'
+checkout,Checkout,page load,GET,/cart,getCart,REQ-006,summary column; redirect to /cart if empty
+checkout,Checkout,click Place Order,POST,/orders,placeOrder,REQ-009,201 navigates to /orders/{orderId}; 409 CART_EMPTY or INSUFFICIENT_STOCK banner
+order-confirmation,Order Confirmation,page load,GET,/orders/{orderId},getOrder,REQ-011,404 renders 'Order not found.' state
+my-orders,My Orders,page load / pagination,GET,/orders,listOrders,REQ-010,query params: page limit; newest first
+(global header),All screens,auth session start / after cart mutation,GET,/cart,getCart,REQ-006,keeps header badge itemCount current; mutations reuse returned cart instead of re-fetching
+(global header),All screens,click Log out,NONE,(client-side only),-,REQ-012,discard JWT; no API call
