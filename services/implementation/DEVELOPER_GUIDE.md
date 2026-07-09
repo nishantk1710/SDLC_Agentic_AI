@@ -316,7 +316,8 @@ position and update the arrows.
 Do this once to set up:
 
 ```powershell
-cd C:\ISG\SDLC\SDLC_Agentic_AI\services\implementation
+# from the repository root
+cd services/implementation
 
 # 1. Create a virtual environment (isolated Python for this project)
 python -m venv .venv

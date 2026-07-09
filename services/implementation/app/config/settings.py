@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     llm_model: str = "claude-opus-4-8"
     llm_max_tokens: int = 16000
+    # Adaptive thinking is supported on Claude 4.6+ models. Set false if you
+    # point llm_model at a model that does not support extended thinking.
+    llm_thinking: bool = True
 
     # Database (used later for workflow state)
     database_url: str | None = None

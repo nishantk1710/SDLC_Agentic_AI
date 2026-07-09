@@ -1,32 +1,33 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.eggs/
-build/
-dist/
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Environment / secrets
+# --- Secrets / env ---
 .env
 .env.*
 !.env.example
 
-# Test / coverage
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
 .pytest_cache/
-.coverage
-htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Workspace artifacts (generated project outputs)
-services/implementation/app/workspace/*
-!services/implementation/app/workspace/.gitkeep
+# --- Node / web ---
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+yarn-error.log*
 
-# IDE / OS
+# --- Editors / OS ---
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- Docker / local data ---
+pgdata/
+redisdata/
