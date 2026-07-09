@@ -84,7 +84,7 @@
               "description": "Dimmable LED desk lamp with three colour temperatures and a USB charging port.",
               "price": 49.99,
               "stockQuantity": 120,
-              "imageUrl": "/assets/products/aurora-desk-lamp.png",
+              "imageUrl": "/assets/products/aurora-desk-lamp.svg",
               "category": "Lighting",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -95,7 +95,7 @@
               "description": "Silent-click ergonomic wireless mouse, 2.4 GHz USB receiver, 18-month battery life.",
               "price": 24.50,
               "stockQuantity": 200,
-              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
               "category": "Electronics",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -106,7 +106,7 @@
               "description": "Aluminium laptop stand, six height settings, folds flat for travel.",
               "price": 39.00,
               "stockQuantity": 75,
-              "imageUrl": "/assets/products/atlas-laptop-stand.png",
+              "imageUrl": "/assets/products/atlas-laptop-stand.svg",
               "category": "Accessories",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -117,7 +117,7 @@
               "description": "Hand-glazed 350 ml stoneware mug, dishwasher and microwave safe.",
               "price": 14.25,
               "stockQuantity": 300,
-              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "imageUrl": "/assets/products/terra-ceramic-mug.svg",
               "category": "Kitchen",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -128,7 +128,7 @@
               "description": "Compact 75% mechanical keyboard, hot-swappable switches, white backlight.",
               "price": 89.99,
               "stockQuantity": 60,
-              "imageUrl": "/assets/products/zephyr-mechanical-keyboard.png",
+              "imageUrl": "/assets/products/zephyr-mechanical-keyboard.svg",
               "category": "Electronics",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -139,7 +139,7 @@
               "description": "Set of three A5 dotted notebooks, 120 gsm paper, lay-flat binding.",
               "price": 12.75,
               "stockQuantity": 500,
-              "imageUrl": "/assets/products/luna-notebook-set.png",
+              "imageUrl": "/assets/products/luna-notebook-set.svg",
               "category": "Stationery",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -150,7 +150,7 @@
               "description": "7-in-1 USB-C hub: HDMI 4K, three USB-A ports, SD/microSD, 100 W pass-through.",
               "price": 34.99,
               "stockQuantity": 90,
-              "imageUrl": "/assets/products/orion-usb-c-hub.png",
+              "imageUrl": "/assets/products/orion-usb-c-hub.svg",
               "category": "Electronics",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -161,7 +161,7 @@
               "description": "Insulated 750 ml stainless-steel bottle, keeps drinks cold 24 h / hot 12 h.",
               "price": 19.99,
               "stockQuantity": 150,
-              "imageUrl": "/assets/products/sol-water-bottle.png",
+              "imageUrl": "/assets/products/sol-water-bottle.svg",
               "category": "Kitchen",
               "isActive": true,
               "createdAt": "2026-06-15T09:00:00Z"
@@ -185,7 +185,7 @@
           "description": "Silent-click ergonomic wireless mouse, 2.4 GHz USB receiver, 18-month battery life.",
           "price": 24.50,
           "stockQuantity": 200,
-          "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+          "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
           "category": "Electronics",
           "isActive": true,
           "createdAt": "2026-06-15T09:00:00Z"
@@ -211,7 +211,7 @@
               "unitPrice": 24.50,
               "quantity": 2,
               "lineTotal": 49.00,
-              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
               "stockQuantity": 200
             },
             {
@@ -221,7 +221,7 @@
               "unitPrice": 14.25,
               "quantity": 1,
               "lineTotal": 14.25,
-              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "imageUrl": "/assets/products/terra-ceramic-mug.svg",
               "stockQuantity": 300
             }
           ],
@@ -253,7 +253,7 @@
               "unitPrice": 24.50,
               "quantity": 2,
               "lineTotal": 49.00,
-              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
               "stockQuantity": 200
             },
             {
@@ -263,7 +263,7 @@
               "unitPrice": 14.25,
               "quantity": 1,
               "lineTotal": 14.25,
-              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "imageUrl": "/assets/products/terra-ceramic-mug.svg",
               "stockQuantity": 300
             }
           ],
@@ -301,7 +301,7 @@
               "unitPrice": 24.50,
               "quantity": 3,
               "lineTotal": 73.50,
-              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
               "stockQuantity": 200
             },
             {
@@ -311,7 +311,7 @@
               "unitPrice": 14.25,
               "quantity": 1,
               "lineTotal": 14.25,
-              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "imageUrl": "/assets/products/terra-ceramic-mug.svg",
               "stockQuantity": 300
             }
           ],
@@ -351,7 +351,7 @@
               "unitPrice": 24.50,
               "quantity": 2,
               "lineTotal": 49.00,
-              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.svg",
               "stockQuantity": 200
             }
           ],

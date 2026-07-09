@@ -65,7 +65,7 @@ CREATE TABLE products (
     description    TEXT          NOT NULL DEFAULT '',
     price          NUMERIC(10,2) NOT NULL,
     stock_quantity INTEGER       NOT NULL DEFAULT 0,
-    image_url      VARCHAR(500),          -- convention: /assets/products/<slug>.png
+    image_url      VARCHAR(500),          -- convention: /assets/products/<slug>.svg
     category       VARCHAR(50)   NOT NULL,
     is_active      BOOLEAN       NOT NULL DEFAULT true,
     created_at     TIMESTAMPTZ   NOT NULL DEFAULT now(),
@@ -205,27 +205,27 @@ CREATE TRIGGER trg_orders_updated_at   BEFORE UPDATE ON orders
 INSERT INTO products (id, name, description, price, stock_quantity, image_url, category, created_at) VALUES
   ('20000000-0000-4000-8000-000000000001', 'Aurora Desk Lamp',
    'Dimmable LED desk lamp with three colour temperatures and a USB charging port.',
-   49.99, 120, '/assets/products/aurora-desk-lamp.png',        'Lighting',    '2026-06-15T09:00:00Z'),
+   49.99, 120, '/assets/products/aurora-desk-lamp.svg',        'Lighting',    '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000002', 'Nimbus Wireless Mouse',
    'Silent-click ergonomic wireless mouse, 2.4 GHz USB receiver, 18-month battery life.',
-   24.50, 200, '/assets/products/nimbus-wireless-mouse.png',   'Electronics', '2026-06-15T09:00:00Z'),
+   24.50, 200, '/assets/products/nimbus-wireless-mouse.svg',   'Electronics', '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000003', 'Atlas Laptop Stand',
    'Aluminium laptop stand, six height settings, folds flat for travel.',
-   39.00,  75, '/assets/products/atlas-laptop-stand.png',      'Accessories', '2026-06-15T09:00:00Z'),
+   39.00,  75, '/assets/products/atlas-laptop-stand.svg',      'Accessories', '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000004', 'Terra Ceramic Mug',
    'Hand-glazed 350 ml stoneware mug, dishwasher and microwave safe.',
-   14.25, 300, '/assets/products/terra-ceramic-mug.png',       'Kitchen',     '2026-06-15T09:00:00Z'),
+   14.25, 300, '/assets/products/terra-ceramic-mug.svg',       'Kitchen',     '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000005', 'Zephyr Mechanical Keyboard',
    'Compact 75% mechanical keyboard, hot-swappable switches, white backlight.',
-   89.99,  60, '/assets/products/zephyr-mechanical-keyboard.png', 'Electronics', '2026-06-15T09:00:00Z'),
+   89.99,  60, '/assets/products/zephyr-mechanical-keyboard.svg', 'Electronics', '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000006', 'Luna Notebook Set',
    'Set of three A5 dotted notebooks, 120 gsm paper, lay-flat binding.',
-   12.75, 500, '/assets/products/luna-notebook-set.png',       'Stationery',  '2026-06-15T09:00:00Z'),
+   12.75, 500, '/assets/products/luna-notebook-set.svg',       'Stationery',  '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000007', 'Orion USB-C Hub',
    '7-in-1 USB-C hub: HDMI 4K, three USB-A ports, SD/microSD, 100 W pass-through.',
-   34.99,  90, '/assets/products/orion-usb-c-hub.png',         'Electronics', '2026-06-15T09:00:00Z'),
+   34.99,  90, '/assets/products/orion-usb-c-hub.svg',         'Electronics', '2026-06-15T09:00:00Z'),
   ('20000000-0000-4000-8000-000000000008', 'Sol Water Bottle',
    'Insulated 750 ml stainless-steel bottle, keeps drinks cold 24 h / hot 12 h.',
-   19.99, 150, '/assets/products/sol-water-bottle.png',        'Kitchen',     '2026-06-15T09:00:00Z');
+   19.99, 150, '/assets/products/sol-water-bottle.svg',        'Kitchen',     '2026-06-15T09:00:00Z');
 
 COMMIT;
