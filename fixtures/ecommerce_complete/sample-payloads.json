@@ -1,0 +1,516 @@
+{
+  "artifact": "sample-payloads.json",
+  "handoffId": "D5",
+  "owner": "M2",
+  "version": "1.0.0",
+  "conventions": {
+    "keying": "One entry per operationId from openapi.yaml (D2). `request` is a valid request body (or `query`/`path` for GET/DELETE); `responses` is keyed by HTTP status.",
+    "consistency": "All product UUIDs match the seed rows in schema.sql (D1), so every example resolves against a freshly-seeded database. The cart/order examples tell one continuous story: Ava registers, adds a mouse and a mug, and checks out.",
+    "fixtureIds": "IDs are fixed, valid UUIDv4 strings namespaced by leading digit: 1=user, 2=product, 3=cart, 4=cart item, 5=order, 6=order item.",
+    "secrets": "The JWT below is a non-functional placeholder — header+payload are decodable but the signature is fake."
+  },
+  "operations": {
+    "registerUser": {
+      "request": {
+        "fullName": "Ava Sharma",
+        "email": "ava.sharma@example.com",
+        "password": "Sunrise42"
+      },
+      "responses": {
+        "201": {
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJleHAiOjE3ODM5NDc2MDB9.FIXTURE-SIGNATURE-NOT-REAL",
+          "tokenType": "Bearer",
+          "expiresIn": 3600,
+          "user": {
+            "id": "10000000-0000-4000-8000-000000000001",
+            "email": "ava.sharma@example.com",
+            "fullName": "Ava Sharma",
+            "createdAt": "2026-07-01T09:00:00Z"
+          }
+        },
+        "400": {
+          "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "One or more fields are invalid.",
+            "details": [
+              { "field": "password", "message": "Password must be at least 8 characters." },
+              { "field": "email", "message": "Enter a valid email address." }
+            ]
+          }
+        },
+        "409": {
+          "error": {
+            "code": "EMAIL_TAKEN",
+            "message": "An account with this email already exists."
+          }
+        }
+      }
+    },
+    "loginUser": {
+      "request": {
+        "email": "ava.sharma@example.com",
+        "password": "Sunrise42"
+      },
+      "responses": {
+        "200": {
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJleHAiOjE3ODM5NDc2MDB9.FIXTURE-SIGNATURE-NOT-REAL",
+          "tokenType": "Bearer",
+          "expiresIn": 3600,
+          "user": {
+            "id": "10000000-0000-4000-8000-000000000001",
+            "email": "ava.sharma@example.com",
+            "fullName": "Ava Sharma",
+            "createdAt": "2026-07-01T09:00:00Z"
+          }
+        },
+        "401": {
+          "error": {
+            "code": "INVALID_CREDENTIALS",
+            "message": "Invalid email or password."
+          }
+        }
+      }
+    },
+    "listProducts": {
+      "request": {
+        "query": { "page": 1, "limit": 12, "sort": "newest" }
+      },
+      "responses": {
+        "200": {
+          "items": [
+            {
+              "id": "20000000-0000-4000-8000-000000000001",
+              "name": "Aurora Desk Lamp",
+              "description": "Dimmable LED desk lamp with three colour temperatures and a USB charging port.",
+              "price": 49.99,
+              "stockQuantity": 120,
+              "imageUrl": "/assets/products/aurora-desk-lamp.png",
+              "category": "Lighting",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000002",
+              "name": "Nimbus Wireless Mouse",
+              "description": "Silent-click ergonomic wireless mouse, 2.4 GHz USB receiver, 18-month battery life.",
+              "price": 24.50,
+              "stockQuantity": 200,
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "category": "Electronics",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000003",
+              "name": "Atlas Laptop Stand",
+              "description": "Aluminium laptop stand, six height settings, folds flat for travel.",
+              "price": 39.00,
+              "stockQuantity": 75,
+              "imageUrl": "/assets/products/atlas-laptop-stand.png",
+              "category": "Accessories",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000004",
+              "name": "Terra Ceramic Mug",
+              "description": "Hand-glazed 350 ml stoneware mug, dishwasher and microwave safe.",
+              "price": 14.25,
+              "stockQuantity": 300,
+              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "category": "Kitchen",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000005",
+              "name": "Zephyr Mechanical Keyboard",
+              "description": "Compact 75% mechanical keyboard, hot-swappable switches, white backlight.",
+              "price": 89.99,
+              "stockQuantity": 60,
+              "imageUrl": "/assets/products/zephyr-mechanical-keyboard.png",
+              "category": "Electronics",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000006",
+              "name": "Luna Notebook Set",
+              "description": "Set of three A5 dotted notebooks, 120 gsm paper, lay-flat binding.",
+              "price": 12.75,
+              "stockQuantity": 500,
+              "imageUrl": "/assets/products/luna-notebook-set.png",
+              "category": "Stationery",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000007",
+              "name": "Orion USB-C Hub",
+              "description": "7-in-1 USB-C hub: HDMI 4K, three USB-A ports, SD/microSD, 100 W pass-through.",
+              "price": 34.99,
+              "stockQuantity": 90,
+              "imageUrl": "/assets/products/orion-usb-c-hub.png",
+              "category": "Electronics",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            },
+            {
+              "id": "20000000-0000-4000-8000-000000000008",
+              "name": "Sol Water Bottle",
+              "description": "Insulated 750 ml stainless-steel bottle, keeps drinks cold 24 h / hot 12 h.",
+              "price": 19.99,
+              "stockQuantity": 150,
+              "imageUrl": "/assets/products/sol-water-bottle.png",
+              "category": "Kitchen",
+              "isActive": true,
+              "createdAt": "2026-06-15T09:00:00Z"
+            }
+          ],
+          "page": 1,
+          "limit": 12,
+          "total": 8,
+          "totalPages": 1
+        }
+      }
+    },
+    "getProduct": {
+      "request": {
+        "path": { "productId": "20000000-0000-4000-8000-000000000002" }
+      },
+      "responses": {
+        "200": {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Nimbus Wireless Mouse",
+          "description": "Silent-click ergonomic wireless mouse, 2.4 GHz USB receiver, 18-month battery life.",
+          "price": 24.50,
+          "stockQuantity": 200,
+          "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+          "category": "Electronics",
+          "isActive": true,
+          "createdAt": "2026-06-15T09:00:00Z"
+        },
+        "404": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Product not found."
+          }
+        }
+      }
+    },
+    "getCart": {
+      "request": {},
+      "responses": {
+        "200": {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "items": [
+            {
+              "id": "40000000-0000-4000-8000-000000000001",
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "name": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 2,
+              "lineTotal": 49.00,
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "stockQuantity": 200
+            },
+            {
+              "id": "40000000-0000-4000-8000-000000000002",
+              "productId": "20000000-0000-4000-8000-000000000004",
+              "name": "Terra Ceramic Mug",
+              "unitPrice": 14.25,
+              "quantity": 1,
+              "lineTotal": 14.25,
+              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "stockQuantity": 300
+            }
+          ],
+          "subtotal": 63.25,
+          "itemCount": 3,
+          "updatedAt": "2026-07-09T10:15:00Z"
+        },
+        "401": {
+          "error": {
+            "code": "UNAUTHORIZED",
+            "message": "Authentication required. Please log in."
+          }
+        }
+      }
+    },
+    "addCartItem": {
+      "request": {
+        "productId": "20000000-0000-4000-8000-000000000004",
+        "quantity": 1
+      },
+      "responses": {
+        "201": {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "items": [
+            {
+              "id": "40000000-0000-4000-8000-000000000001",
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "name": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 2,
+              "lineTotal": 49.00,
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "stockQuantity": 200
+            },
+            {
+              "id": "40000000-0000-4000-8000-000000000002",
+              "productId": "20000000-0000-4000-8000-000000000004",
+              "name": "Terra Ceramic Mug",
+              "unitPrice": 14.25,
+              "quantity": 1,
+              "lineTotal": 14.25,
+              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "stockQuantity": 300
+            }
+          ],
+          "subtotal": 63.25,
+          "itemCount": 3,
+          "updatedAt": "2026-07-09T10:15:00Z"
+        },
+        "404": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Product not found."
+          }
+        },
+        "409": {
+          "error": {
+            "code": "INSUFFICIENT_STOCK",
+            "message": "Only 3 left in stock."
+          }
+        }
+      }
+    },
+    "updateCartItem": {
+      "request": {
+        "path": { "itemId": "40000000-0000-4000-8000-000000000001" },
+        "body": { "quantity": 3 }
+      },
+      "responses": {
+        "200": {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "items": [
+            {
+              "id": "40000000-0000-4000-8000-000000000001",
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "name": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 3,
+              "lineTotal": 73.50,
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "stockQuantity": 200
+            },
+            {
+              "id": "40000000-0000-4000-8000-000000000002",
+              "productId": "20000000-0000-4000-8000-000000000004",
+              "name": "Terra Ceramic Mug",
+              "unitPrice": 14.25,
+              "quantity": 1,
+              "lineTotal": 14.25,
+              "imageUrl": "/assets/products/terra-ceramic-mug.png",
+              "stockQuantity": 300
+            }
+          ],
+          "subtotal": 87.75,
+          "itemCount": 4,
+          "updatedAt": "2026-07-09T10:20:00Z"
+        },
+        "400": {
+          "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "One or more fields are invalid.",
+            "details": [
+              { "field": "quantity", "message": "Quantity must be at least 1." }
+            ]
+          }
+        },
+        "404": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Cart item not found."
+          }
+        }
+      }
+    },
+    "removeCartItem": {
+      "request": {
+        "path": { "itemId": "40000000-0000-4000-8000-000000000002" }
+      },
+      "responses": {
+        "200": {
+          "id": "30000000-0000-4000-8000-000000000001",
+          "items": [
+            {
+              "id": "40000000-0000-4000-8000-000000000001",
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "name": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 2,
+              "lineTotal": 49.00,
+              "imageUrl": "/assets/products/nimbus-wireless-mouse.png",
+              "stockQuantity": 200
+            }
+          ],
+          "subtotal": 49.00,
+          "itemCount": 2,
+          "updatedAt": "2026-07-09T10:25:00Z"
+        },
+        "404": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Cart item not found."
+          }
+        }
+      }
+    },
+    "placeOrder": {
+      "request": {
+        "shippingAddress": {
+          "name": "Ava Sharma",
+          "line1": "42 Marine Drive",
+          "line2": "Apt 7B",
+          "city": "Mumbai",
+          "postalCode": "400020",
+          "country": "IN"
+        }
+      },
+      "responses": {
+        "201": {
+          "id": "50000000-0000-4000-8000-000000000001",
+          "orderNumber": "ORD-000042",
+          "status": "PENDING",
+          "items": [
+            {
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "productName": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 2,
+              "lineTotal": 49.00
+            },
+            {
+              "productId": "20000000-0000-4000-8000-000000000004",
+              "productName": "Terra Ceramic Mug",
+              "unitPrice": 14.25,
+              "quantity": 1,
+              "lineTotal": 14.25
+            }
+          ],
+          "subtotal": 63.25,
+          "shippingFee": 5.00,
+          "total": 68.25,
+          "shippingAddress": {
+            "name": "Ava Sharma",
+            "line1": "42 Marine Drive",
+            "line2": "Apt 7B",
+            "city": "Mumbai",
+            "postalCode": "400020",
+            "country": "IN"
+          },
+          "placedAt": "2026-07-09T10:30:00Z"
+        },
+        "400": {
+          "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "One or more fields are invalid.",
+            "details": [
+              { "field": "shippingAddress.postalCode", "message": "Enter a valid postal code." }
+            ]
+          }
+        },
+        "409": {
+          "error": {
+            "code": "CART_EMPTY",
+            "message": "Your cart is empty. Add items before checking out."
+          }
+        }
+      }
+    },
+    "listOrders": {
+      "request": {
+        "query": { "page": 1, "limit": 10 }
+      },
+      "responses": {
+        "200": {
+          "items": [
+            {
+              "id": "50000000-0000-4000-8000-000000000001",
+              "orderNumber": "ORD-000042",
+              "status": "PENDING",
+              "total": 68.25,
+              "itemCount": 3,
+              "placedAt": "2026-07-09T10:30:00Z"
+            },
+            {
+              "id": "50000000-0000-4000-8000-000000000002",
+              "orderNumber": "ORD-000017",
+              "status": "DELIVERED",
+              "total": 54.99,
+              "itemCount": 1,
+              "placedAt": "2026-06-20T14:05:00Z"
+            }
+          ],
+          "page": 1,
+          "limit": 10,
+          "total": 2,
+          "totalPages": 1
+        },
+        "401": {
+          "error": {
+            "code": "UNAUTHORIZED",
+            "message": "Authentication required. Please log in."
+          }
+        }
+      }
+    },
+    "getOrder": {
+      "request": {
+        "path": { "orderId": "50000000-0000-4000-8000-000000000001" }
+      },
+      "responses": {
+        "200": {
+          "id": "50000000-0000-4000-8000-000000000001",
+          "orderNumber": "ORD-000042",
+          "status": "PENDING",
+          "items": [
+            {
+              "productId": "20000000-0000-4000-8000-000000000002",
+              "productName": "Nimbus Wireless Mouse",
+              "unitPrice": 24.50,
+              "quantity": 2,
+              "lineTotal": 49.00
+            },
+            {
+              "productId": "20000000-0000-4000-8000-000000000004",
+              "productName": "Terra Ceramic Mug",
+              "unitPrice": 14.25,
+              "quantity": 1,
+              "lineTotal": 14.25
+            }
+          ],
+          "subtotal": 63.25,
+          "shippingFee": 5.00,
+          "total": 68.25,
+          "shippingAddress": {
+            "name": "Ava Sharma",
+            "line1": "42 Marine Drive",
+            "line2": "Apt 7B",
+            "city": "Mumbai",
+            "postalCode": "400020",
+            "country": "IN"
+          },
+          "placedAt": "2026-07-09T10:30:00Z"
+        },
+        "404": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Order not found."
+          }
+        }
+      }
+    }
+  }
+}

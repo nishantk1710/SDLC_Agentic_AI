@@ -1,0 +1,610 @@
+# ============================================================================
+# openapi.yaml — design-pack artifact D2 (owner: M2 — Data & API)
+# Sample application: e-commerce shop · NestJS (Node 20) REST · JWT auth
+# Companion: sample-payloads.json (D5) holds one concrete request/response set
+# per operationId. Field rules + exact error messages: validation-rules.json (D4).
+# ============================================================================
+openapi: 3.0.3
+info:
+  title: E-Commerce Shop API
+  version: 1.0.0
+  description: |
+    REST API for the sample e-commerce shop (design-pack fixture).
+
+    **Conventions**
+    - JSON bodies use camelCase; the database (schema.sql, D1) uses snake_case.
+      The mapping is mechanical (`fullName` ↔ `full_name`).
+    - Money values are decimal numbers with exactly 2 fraction digits, USD.
+    - Timestamps are ISO-8601 UTC (`2026-07-09T10:30:00Z`).
+    - Every error uses the `ErrorResponse` envelope. Field-level failures
+      (HTTP 400, code `VALIDATION_ERROR`) list each field in `details[]` with
+      the exact message text from validation-rules.json.
+    - `x-req-ids` on each operation cross-references extracted-requirements.md (A1).
+    - Auth: JWT bearer token from `POST /auth/login` or `POST /auth/register`,
+      expires after 3600 s (NFR-001). Protected operations return 401
+      (`UNAUTHORIZED`) without a valid token.
+    - Cart and order resources are always scoped to the authenticated user;
+      requesting another user's resource returns 404, never 403.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development (NestJS default port)
+  - url: /api/v1
+    description: Relative — same origin as the frontend
+
+tags:
+  - name: auth
+    description: Registration and login (REQ-001, REQ-002)
+  - name: products
+    description: Public catalogue (REQ-003, REQ-004)
+  - name: cart
+    description: The authenticated user's single open cart (REQ-005…REQ-008)
+  - name: orders
+    description: Checkout and order history (REQ-009…REQ-011)
+
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: registerUser
+      summary: Register a new account
+      description: |
+        Creates the user, creates their (empty) cart, and returns a JWT so the
+        user is signed in immediately after registering.
+        Business rules: BR-001 (unique email), BR-002 (password policy).
+      x-req-ids: [REQ-001]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created; user is authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: BR-001 — email already registered (code `EMAIL_TAKEN`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: loginUser
+      summary: Log in with email and password
+      x-req-ids: [REQ-002]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Wrong email or password (code `INVALID_CREDENTIALS`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products:
+    get:
+      tags: [products]
+      operationId: listProducts
+      summary: List products (paginated, searchable)
+      description: Public — no auth required. Only `isActive` products are returned.
+      x-req-ids: [REQ-003]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          description: Items per page (NFR-004 caps this at 100).
+          schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
+        - name: search
+          in: query
+          description: Case-insensitive substring match on product name.
+          schema: { type: string, maxLength: 100 }
+        - name: category
+          in: query
+          schema: { type: string, maxLength: 50 }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_asc, price_desc, name_asc, name_desc]
+            default: newest
+      responses:
+        '200':
+          description: One page of products.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /products/{productId}:
+    get:
+      tags: [products]
+      operationId: getProduct
+      summary: Get one product by id
+      description: Public — no auth required.
+      x-req-ids: [REQ-004]
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: The product.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cart:
+    get:
+      tags: [cart]
+      operationId: getCart
+      summary: Get the current user's cart
+      x-req-ids: [REQ-006]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The cart (items may be empty).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /cart/items:
+    post:
+      tags: [cart]
+      operationId: addCartItem
+      summary: Add a product to the cart
+      description: |
+        If the product is already in the cart, quantities are merged and the
+        merged total must still satisfy BR-003 (1–99 and ≤ stock).
+        Returns the full updated cart so the UI never has to re-fetch.
+      x-req-ids: [REQ-005]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '201':
+          description: Item added (or merged); full updated cart returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: BR-003 — not enough stock (code `INSUFFICIENT_STOCK`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cart/items/{itemId}:
+    patch:
+      tags: [cart]
+      operationId: updateCartItem
+      summary: Change a cart line's quantity
+      x-req-ids: [REQ-007]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Quantity updated; full updated cart returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: BR-003 — not enough stock (code `INSUFFICIENT_STOCK`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [cart]
+      operationId: removeCartItem
+      summary: Remove a line from the cart
+      x-req-ids: [REQ-008]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Line removed; full updated cart returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders:
+    post:
+      tags: [orders]
+      operationId: placeOrder
+      summary: Place an order from the current cart (checkout)
+      description: |
+        Atomically: re-checks stock (BR-003), snapshots product name and unit
+        price onto the order lines (BR-005), decrements stock, adds the flat
+        5.00 shipping fee (BR-006), empties the cart (BR-004), and creates the
+        order in status PENDING (BR-007; transitions in state-transitions.md).
+      x-req-ids: [REQ-009]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOrderRequest'
+      responses:
+        '201':
+          description: Order placed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: >
+            BR-004 — cart is empty (code `CART_EMPTY`), or BR-003 — stock
+            changed since the cart was filled (code `INSUFFICIENT_STOCK`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [orders]
+      operationId: listOrders
+      summary: List the current user's orders (newest first)
+      x-req-ids: [REQ-010]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+      responses:
+        '200':
+          description: One page of order summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /orders/{orderId}:
+    get:
+      tags: [orders]
+      operationId: getOrder
+      summary: Get one of the current user's orders
+      description: Another user's order id returns 404, never 403.
+      x-req-ids: [REQ-011]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: The full order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Access token from registerUser/loginUser. Expires after 3600 s
+        (NFR-001). Send as `Authorization: Bearer <token>`.
+
+  parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: The cart line id (`CartItem.id`), not the product id.
+      schema: { type: string, format: uuid }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    ValidationError:
+      description: >
+        One or more fields failed validation (code `VALIDATION_ERROR`);
+        `details[]` carries the exact messages from validation-rules.json.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing/expired/invalid JWT (code `UNAUTHORIZED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found, or not owned by the caller (code `NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ---- auth -------------------------------------------------------------
+    RegisterRequest:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 100, example: Ava Sharma }
+        email: { type: string, format: email, maxLength: 255, example: ava.sharma@example.com }
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: Must contain at least one letter and one number (BR-002).
+          example: Sunrise42
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: ava.sharma@example.com }
+        password: { type: string, format: password, example: Sunrise42 }
+    AuthResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken: { type: string, description: JWT access token. }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer, description: Seconds until expiry (NFR-001)., example: 3600 }
+        user: { $ref: '#/components/schemas/User' }
+    User:
+      type: object
+      required: [id, email, fullName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    # ---- products ----------------------------------------------------------
+    Product:
+      type: object
+      required: [id, name, description, price, stockQuantity, category, isActive, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 150 }
+        description: { type: string }
+        price: { type: number, format: double, multipleOf: 0.01, minimum: 0.01, description: USD. }
+        stockQuantity: { type: integer, minimum: 0 }
+        imageUrl: { type: string, nullable: true, maxLength: 500 }
+        category: { type: string, maxLength: 50 }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    ProductListResponse:
+      type: object
+      required: [items, page, limit, total, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer, description: Total matching products across all pages. }
+        totalPages: { type: integer }
+
+    # ---- cart ---------------------------------------------------------------
+    AddCartItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+    UpdateCartItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+    CartItem:
+      type: object
+      required: [id, productId, name, unitPrice, quantity, lineTotal, stockQuantity]
+      properties:
+        id: { type: string, format: uuid, description: Cart line id — use for PATCH/DELETE. }
+        productId: { type: string, format: uuid }
+        name: { type: string, description: 'Current product name (live, not a snapshot).' }
+        unitPrice: { type: number, format: double, multipleOf: 0.01 }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+        lineTotal: { type: number, format: double, multipleOf: 0.01, description: unitPrice × quantity. }
+        imageUrl: { type: string, nullable: true }
+        stockQuantity: { type: integer, description: Current stock — lets the UI cap the quantity stepper (BR-003). }
+    Cart:
+      type: object
+      required: [id, items, subtotal, itemCount, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+        subtotal: { type: number, format: double, multipleOf: 0.01, description: Sum of lineTotals. }
+        itemCount: { type: integer, description: Sum of quantities — the header badge number. }
+        updatedAt: { type: string, format: date-time }
+
+    # ---- orders --------------------------------------------------------------
+    ShippingAddress:
+      type: object
+      required: [name, line1, city, postalCode, country]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        line1: { type: string, maxLength: 255 }
+        line2: { type: string, nullable: true, maxLength: 255 }
+        city: { type: string, maxLength: 100 }
+        postalCode: { type: string, pattern: '^[A-Za-z0-9 -]{3,20}$' }
+        country: { type: string, pattern: '^[A-Z]{2}$', description: ISO 3166-1 alpha-2., example: IN }
+    PlaceOrderRequest:
+      type: object
+      required: [shippingAddress]
+      properties:
+        shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }
+    OrderItem:
+      type: object
+      required: [productId, productName, unitPrice, quantity, lineTotal]
+      properties:
+        productId: { type: string, format: uuid }
+        productName: { type: string, description: Snapshot at placement (BR-005). }
+        unitPrice: { type: number, format: double, multipleOf: 0.01, description: Snapshot at placement (BR-005). }
+        quantity: { type: integer, minimum: 1 }
+        lineTotal: { type: number, format: double, multipleOf: 0.01, description: unitPrice × quantity. }
+    Order:
+      type: object
+      required: [id, orderNumber, status, items, subtotal, shippingFee, total, shippingAddress, placedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderNumber: { type: string, pattern: '^ORD-[0-9]{6}$', example: ORD-000042 }
+        status:
+          type: string
+          enum: [PENDING, PAID, SHIPPED, DELIVERED, CANCELLED]
+          description: Lifecycle per state-transitions.md (BR-007).
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrderItem' }
+        subtotal: { type: number, format: double, multipleOf: 0.01 }
+        shippingFee: { type: number, format: double, multipleOf: 0.01, description: Flat 5.00 (BR-006). }
+        total: { type: number, format: double, multipleOf: 0.01, description: subtotal + shippingFee. }
+        shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }
+        placedAt: { type: string, format: date-time }
+    OrderSummary:
+      type: object
+      required: [id, orderNumber, status, total, itemCount, placedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderNumber: { type: string }
+        status:
+          type: string
+          enum: [PENDING, PAID, SHIPPED, DELIVERED, CANCELLED]
+        total: { type: number, format: double, multipleOf: 0.01 }
+        itemCount: { type: integer, description: Sum of line quantities. }
+        placedAt: { type: string, format: date-time }
+    OrderListResponse:
+      type: object
+      required: [items, page, limit, total, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderSummary' }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+    # ---- errors ---------------------------------------------------------------
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - INVALID_CREDENTIALS
+                - UNAUTHORIZED
+                - NOT_FOUND
+                - EMAIL_TAKEN
+                - CART_EMPTY
+                - INSUFFICIENT_STOCK
+                - INTERNAL_ERROR
+            message:
+              type: string
+              description: Human-readable, safe to show to the user as-is.
+            details:
+              type: array
+              description: Present only for VALIDATION_ERROR.
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field: { type: string, example: password }
+                  message: { type: string, example: Password must be at least 8 characters. }
