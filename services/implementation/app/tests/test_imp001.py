@@ -12,6 +12,7 @@ Test 6 (manifest gate) is a pure disk check and runs under ``pytest -m "not inte
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 import pytest
@@ -196,25 +197,45 @@ def _any_validation_message(design_package: dict[str, Any], body: str) -> bool:
     return any(msg and msg in body for msg in messages)
 
 
+_TOKEN_META_KEYS = {"artifact", "handoffId", "owner", "version", "conventions"}
+_HEX_RE = re.compile(r"^#[0-9A-Fa-f]{3,8}$")
+_DIM_RE = re.compile(r"^-?\d+(?:\.\d+)?(?:px|rem|em)$")
+# Tailwind / CSS-var prefixes a token *name* appears behind when actually used.
+_TOKEN_USE_PREFIXES = ("bg-", "text-", "border-", "ring-", "fill-", "stroke-", "--", "var(--")
+
+
 def _uses_design_tokens(design_package: dict[str, Any], body: str) -> bool:
+    """True only on a MEANINGFUL sign of token use — not a bare substring of a generic word.
+
+    Signals (any one): a token-shaped VALUE used literally (hex / px|rem|em); a distinctive
+    token NAME used behind a Tailwind/CSS-var prefix (e.g. `bg-primary`); or two+ distinct
+    long token names present. This avoids both the old false-fail (checking group names like
+    "color") and a false-pass (matching `error`/`text`/`min` in any TS file).
+    """
     tokens = design_package.get("tokens.json")
     if not isinstance(tokens, dict):
         return False
-    # Collect LEAF token names + values (e.g. "primary", "#2563EB", "sm", "8px") — not the
-    # container group names ("color"/"spacing"), which don't appear literally in Tailwind output.
-    candidates: set[str] = set()
+
+    values: set[str] = set()  # token-shaped leaf values (hex / dimensions)
+    names: set[str] = set()   # meaningful leaf names
 
     def _collect(node: Any) -> None:
         if isinstance(node, dict):
             for key, value in node.items():
-                if key.startswith("_"):
+                if key.startswith("_") or key in _TOKEN_META_KEYS:
                     continue
                 if isinstance(value, str):
-                    candidates.update({key, value})  # leaf name + value
+                    if _HEX_RE.match(value) or _DIM_RE.match(value):
+                        values.add(value)
+                    if len(key) >= 5:  # distinctive names only ('primary','surface','error',...)
+                        names.add(key)
                 else:
                     _collect(value)
-        elif isinstance(node, list):
-            candidates.update(x for x in node if isinstance(x, str))
 
     _collect(tokens)
-    return any(token and token in body for token in candidates)
+
+    if any(value in body for value in values):
+        return True  # a design-token value used literally (hex / dimension)
+    if any(f"{prefix}{name}" in body for name in names for prefix in _TOKEN_USE_PREFIXES):
+        return True  # a token name used behind a Tailwind/CSS-var prefix
+    return sum(1 for name in names if name in body) >= 2  # multiple distinct token names present
