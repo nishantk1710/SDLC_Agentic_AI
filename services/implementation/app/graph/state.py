@@ -47,6 +47,7 @@ class WorkflowState(TypedDict, total=False):
     work_item_index: int                  # graph cursor: index of the NEXT item to select
     current_work_item: WorkItem | None    # the item currently being generated
     generated_code: list[str]             # workspace-relative paths of files written this run
+    codegen_ok: bool                      # did the current item's generation succeed (files written)?
     gate_result: GateResult | None        # most recent gate evaluation (pass/fail + stderr)
     repair_attempt: int                   # LOCAL repair counter, reset per work item
     generation_summary: str               # human-readable free-text summary of the run

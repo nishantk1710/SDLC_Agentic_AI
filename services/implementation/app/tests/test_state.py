@@ -5,8 +5,8 @@ from app.models import WorkItem
 
 ALL_FIELDS = {
     "project_id", "run_id", "attempt", "design_package",
-    "work_items", "work_item_index", "current_work_item", "generated_code", "gate_result",
-    "repair_attempt", "generation_summary", "generation_metrics",
+    "work_items", "work_item_index", "current_work_item", "generated_code", "codegen_ok",
+    "gate_result", "repair_attempt", "generation_summary", "generation_metrics",
     "review_report", "refactored_code", "unit_tests", "documentation", "security_report",
     "workflow_status",
 }

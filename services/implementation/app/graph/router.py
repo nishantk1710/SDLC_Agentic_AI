@@ -20,6 +20,15 @@ def route_after_select(state: WorkflowState) -> str:
     return "code_generator" if state.get("current_work_item") is not None else END
 
 
+def route_after_codegen(state: WorkflowState) -> str:
+    """After generation: run the gate on success, or escalate a failed item (no gate/commit).
+
+    A generation failure (invalid model output after retry → no files) must NOT reach the gate
+    or produce a commit; it is flagged for human review.
+    """
+    return "gate" if state.get("codegen_ok", True) else "escalate"
+
+
 def route_after_gate(state: WorkflowState) -> str:
     """The gate decision: all-pass → commit; fail under cap → repair; fail at cap → escalate."""
     gate_result = state.get("gate_result")

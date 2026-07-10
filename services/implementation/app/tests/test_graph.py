@@ -67,3 +67,15 @@ def test_always_fails_stops_at_cap_needs_human_review_no_commit() -> None:
     assert final["workflow_status"] == "needs_human_review"
     assert final["repair_attempt"] == 3                   # == REPAIR_CAP
     assert executor.commits == []                         # NO commit on the escalation path
+
+
+def test_bad_codegen_escalates_without_reaching_gate(monkeypatch) -> None:
+    # A generation that never yields valid JSON must NOT reach the gate or commit.
+    monkeypatch.setattr(llm_gateway.llm_gateway, "complete", lambda *a, **k: "not json at all")
+    executor = FakeExecutor()
+    final = _run(executor, "t-badcodegen")
+
+    assert final["generated_code"] == []                  # nothing written
+    assert final["workflow_status"] == "needs_human_review"
+    assert executor.commits == []                          # no commit
+    assert executor.commands == []                         # gate never ran a check (no compile call)

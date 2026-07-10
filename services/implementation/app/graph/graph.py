@@ -17,7 +17,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agents.repair import repair_node
 from app.graph import nodes
-from app.graph.router import route_after_gate, route_after_select
+from app.graph.router import route_after_codegen, route_after_gate, route_after_select
 from app.graph.state import WorkflowState
 
 
@@ -35,7 +35,9 @@ def build_graph():
 
     graph.add_edge(START, "select")
     graph.add_conditional_edges("select", route_after_select, {"code_generator": "code_generator", END: END})
-    graph.add_edge("code_generator", "gate")
+    graph.add_conditional_edges(
+        "code_generator", route_after_codegen, {"gate": "gate", "escalate": "escalate"}
+    )
     graph.add_conditional_edges(
         "gate", route_after_gate, {"commit": "commit", "repair": "repair", "escalate": "escalate"}
     )

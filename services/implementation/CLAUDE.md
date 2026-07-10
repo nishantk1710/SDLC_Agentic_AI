@@ -27,10 +27,12 @@ working, compiling source code, file by file, then pause for human review.
 Code generation runs two paths that share **the same tools on the same MCP server in the same
 sandbox container** (reached only through `app/integrations/executor.py`):
 
-- **Fixed path** — `compile` / `build` / `test` / `lint`, and `git commit`. **Your node code
-  forms the call and invokes the executor directly** (deterministic `await tool.ainvoke(...)`
-  via the executor). Always runs, always in order. These are the quality gates and audit
-  checkpoints — never left to the model.
+- **Fixed path** — the executor's deterministic checks (`compile` / `build` / `test` / `lint`)
+  and `git commit`. **Your node code forms the call and invokes the executor directly**
+  (deterministic `await tool.ainvoke(...)`). These are the quality gates and audit checkpoints —
+  never left to the model. NOTE: the **code-generation gate runs only `compile` + `build`**
+  (see Control flow); `test`/`lint` are exposed by the executor but owned by the downstream
+  Unit-Test / Review / Security agents (generated source has no tests yet).
 - **Repair path** — inspect files / install packages / `git diff` / `git status` / reason.
   Tools are bound to the model **through `self.llm`** (the gateway's tool-calling method); the
   **model decides when** to call them. Situational recovery only.
@@ -84,8 +86,8 @@ sandbox container has **no network egress except the package registries (PyPI + 
 ## Control flow
 
 ```
-code_generator → gate(compile, build, test, lint)
-    │
+code_generator → gate(compile, build)   # test/lint deferred to the Unit-Test/Review/Security
+    │                                     # agents; generated source has no tests yet
     ├─ gate pass ───────────────────────────→ commit (fixed) → next work item / done
     │
     ├─ gate fail & repair_attempt < 3 ──────→ repair (LLM + tools) → back to gate
