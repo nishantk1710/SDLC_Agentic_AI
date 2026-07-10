@@ -1,0 +1,2 @@
+# exec-sandbox MCP server dependencies (installed inside the sandbox image).
+mcp>=1.6
