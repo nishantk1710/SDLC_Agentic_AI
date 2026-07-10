@@ -1,0 +1,17 @@
+# API framework
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.32,<1.0
+
+# Workflow orchestration
+langgraph>=0.2,<2.0
+
+# Validation & config
+pydantic>=2.9,<3.0
+pydantic-settings>=2.5,<3.0
+
+# LLM provider (Claude)
+anthropic>=0.40,<1.0
+
+# Testing
+pytest>=8.3,<10.0
+httpx>=0.27,<1.0
