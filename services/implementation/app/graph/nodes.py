@@ -46,17 +46,22 @@ def select_work_item_node(state: WorkflowState) -> WorkflowState:
 
 
 def gate_node(state: WorkflowState) -> WorkflowState:
-    """FIXED, deterministic quality gate: compile → build → test → lint, in order.
+    """FIXED, deterministic quality gate for the code-generation phase: compile → build.
 
     Short-circuits on the first failing check and records ``gate_result`` (which check failed +
     captured stderr). An executor/sandbox error (timeout, network partition) is treated as a
     gate failure — recorded as a failing check — rather than crashing the graph. This node is
     the ROUTER source; it makes no routing decision itself.
+
+    NOTE: ``test`` and ``lint`` are intentionally NOT run here. This agent only generates source
+    code — there are no unit tests yet (``pytest`` on test-less code exits 5 "no tests
+    collected"), and lint/coverage belong to the later pipeline agents that own them (Unit Test,
+    Review, Security). The executor still exposes ``test``/``lint`` for those stages.
     """
     executor = get_executor()
     project_dir = state.get("project_id") or state.get("run_id") or "project"
     checks: list[GateCheck] = []
-    for run_check in (executor.compile, executor.build, executor.test, executor.lint):
+    for run_check in (executor.compile, executor.build):
         try:
             result = run_check(project_dir)
         except Exception as exc:  # noqa: BLE001 - executor failure becomes a gate failure, not a crash

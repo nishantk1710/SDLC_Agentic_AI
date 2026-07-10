@@ -200,5 +200,21 @@ def _uses_design_tokens(design_package: dict[str, Any], body: str) -> bool:
     tokens = design_package.get("tokens.json")
     if not isinstance(tokens, dict):
         return False
-    # any top-level token group name (e.g. "colors", "spacing", "radius") referenced in the code
-    return any(str(group) in body for group in tokens.keys())
+    # Collect LEAF token names + values (e.g. "primary", "#2563EB", "sm", "8px") — not the
+    # container group names ("color"/"spacing"), which don't appear literally in Tailwind output.
+    candidates: set[str] = set()
+
+    def _collect(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key.startswith("_"):
+                    continue
+                if isinstance(value, str):
+                    candidates.update({key, value})  # leaf name + value
+                else:
+                    _collect(value)
+        elif isinstance(node, list):
+            candidates.update(x for x in node if isinstance(x, str))
+
+    _collect(tokens)
+    return any(token and token in body for token in candidates)

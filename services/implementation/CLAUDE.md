@@ -84,8 +84,8 @@ sandbox container has **no network egress except the package registries (PyPI + 
 ## Control flow
 
 ```
-code_generator → gate(compile, build, test, lint)
-    │
+code_generator → gate(compile, build)   # test/lint deferred to the Unit-Test/Review/Security
+    │                                     # agents; generated source has no tests yet
     ├─ gate pass ───────────────────────────→ commit (fixed) → next work item / done
     │
     ├─ gate fail & repair_attempt < 3 ──────→ repair (LLM + tools) → back to gate

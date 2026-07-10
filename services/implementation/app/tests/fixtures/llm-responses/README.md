@@ -13,3 +13,9 @@ of calling a real model, so tests are deterministic and cost no tokens.
 
 Hand-authored `*.broken1.txt` / `*.fixed.txt` recordings drive the repair/cap tests against the
 REAL compiler (broken1 = code that will not compile; fixed = code that compiles).
+
+**Path convention (repair recordings):** code generation prefixes each file path with the run's
+`project_id`; the repair step writes the paths it was *shown* verbatim (already prefixed). So a
+codegen recording (e.g. `*.broken1`) uses an UNPREFIXED path, while a repair recording (`*.fixed`)
+uses the PREFIXED path so it overwrites the same file. `test_imp001` runs with `project_id="p1"`,
+hence `p1/…` in `backend-loginUser.fixed.txt`.
