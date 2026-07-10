@@ -1,0 +1,107 @@
+{
+  "artifact": "frontend-structure.json",
+  "handoffId": "E4-FE",
+  "owner": "M4",
+  "version": "1.0.0",
+  "stack": {
+    "framework": "React 18",
+    "language": "TypeScript (strict)",
+    "bundler": "Vite",
+    "styling": "Tailwind CSS (tokens.json mapped 1:1 in tailwind.config.ts)",
+    "routing": "react-router-dom v6 (paths from routes.json)",
+    "serverState": "@tanstack/react-query (one hook per operationId)",
+    "devServer": "http://localhost:5173, proxies VITE_API_BASE_URL"
+  },
+  "conventions": {
+    "pages": "Exactly one page component per route in routes.json; page files fetch data, feature/ui components stay presentational.",
+    "naming": "Components PascalCase.tsx, hooks useCamelCase.ts, everything else camelCase.ts.",
+    "api": "src/api/* is the ONLY place fetch happens. Types mirror openapi.yaml component schemas verbatim; error envelope parsed into ApiError {code, message, details}.",
+    "validation": "src/lib/validation.ts implements validation-rules.json (same rule order, exact messages) for inline UI validation; the server remains authoritative.",
+    "tokens": "No raw hex/px in components — Tailwind classes generated from tokens.json only."
+  },
+  "tree": {
+    "index.html": "Vite entry; loads Inter via @fontsource-variable/inter",
+    "vite.config.ts": "React plugin; /api/v1 dev proxy → http://localhost:3000",
+    "tailwind.config.ts": "theme.extend generated from tokens.json (colors, spacing sm/md/lg, radius, font sizes body/h1/h2/h3/small, breakpoints 376px/1024px)",
+    "public/": {
+      "assets/": "copied verbatim from the design pack assets/ folder (see assets-manifest.md) — serves /assets/products/*.svg and /assets/icons/*.svg"
+    },
+    "src/": {
+      "main.tsx": "React root, Router + QueryClient + AuthProvider",
+      "App.tsx": "Layout shell: Header, <Outlet/>, Footer, ToastViewport",
+      "router.tsx": "Route table from routes.json incl. ProtectedRoute wrapper and * fallback",
+      "api/": {
+        "client.ts": "fetch wrapper: base URL, Authorization header, ApiError parsing, 401 → session-expired handling (state-transitions.md §3)",
+        "types.ts": "TS mirrors of openapi.yaml schemas (User, Product, Cart, CartItem, Order, ...)",
+        "auth.ts": "registerUser, loginUser",
+        "products.ts": "listProducts, getProduct",
+        "cart.ts": "getCart, addCartItem, updateCartItem, removeCartItem",
+        "orders.ts": "placeOrder, listOrders, getOrder"
+      },
+      "auth/": {
+        "AuthContext.tsx": "JWT storage (memory + localStorage), login/logout, expiry handling (NFR-001, REQ-012)",
+        "useAuth.ts": "context hook",
+        "ProtectedRoute.tsx": "redirects to /login?next=<path> per routes.json guards"
+      },
+      "components/": {
+        "ui/": {
+          "Button.tsx": "primary | secondary | ghost | danger × default/hover/disabled/loading (mockup gallery)",
+          "Input.tsx": "label + input + field-error/hint slots",
+          "Card.tsx": "",
+          "Modal.tsx": "focus-trapped; fade+slide-up 200ms (tokens.motion)",
+          "Toast.tsx": "success auto-dismiss 3000ms; error sticky",
+          "Badge.tsx": "order-status colours from tokens.statusBadge",
+          "Pagination.tsx": "",
+          "Spinner.tsx": "800ms rotation",
+          "EmptyState.tsx": "icon + message + CTA (state-transitions.md §4)"
+        },
+        "layout/": {
+          "Header.tsx": "logo, nav, cart badge (itemCount), hamburger ≤375px",
+          "Footer.tsx": ""
+        }
+      },
+      "features/": {
+        "products/": {
+          "ProductGrid.tsx": "1/2/4 columns via Tailwind breakpoints",
+          "ProductCard.tsx": "",
+          "FiltersSidebar.tsx": "search/category/sort; drawer on mobile"
+        },
+        "cart/": {
+          "CartLine.tsx": "",
+          "QuantityStepper.tsx": "clamped 1..min(99, stockQuantity) — BR-003",
+          "RemoveItemModal.tsx": ""
+        },
+        "checkout/": {
+          "AddressForm.tsx": "fields + rules from validation-rules.json checkout",
+          "OrderSummaryCard.tsx": "subtotal + 5.00 shipping + total (BR-006)"
+        },
+        "orders/": {
+          "OrderRow.tsx": "",
+          "OrderLinesTable.tsx": ""
+        }
+      },
+      "pages/": {
+        "HomePage.tsx": "route home",
+        "LoginPage.tsx": "route login",
+        "RegisterPage.tsx": "route register",
+        "ProductsPage.tsx": "route products",
+        "ProductDetailsPage.tsx": "route product-details",
+        "CartPage.tsx": "route cart",
+        "CheckoutPage.tsx": "route checkout",
+        "OrderConfirmationPage.tsx": "route order-confirmation",
+        "MyOrdersPage.tsx": "route my-orders"
+      },
+      "lib/": {
+        "format.ts": "money (2dp USD strings), dates (long form, e.g. '9 July 2026')",
+        "validation.ts": "client-side mirror of validation-rules.json"
+      },
+      "styles/": {
+        "index.css": "Tailwind layers + the few globals (focus ring)"
+      }
+    },
+    "tests/": {
+      "e2e/": "Playwright specs per user flow (user-features.md B1)",
+      "unit/": "Vitest for lib/ and components/ui/"
+    }
+  }
+}

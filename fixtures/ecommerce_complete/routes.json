@@ -1,0 +1,121 @@
+{
+  "artifact": "routes.json",
+  "handoffId": "B2",
+  "owner": "M3",
+  "version": "1.0.0",
+  "conventions": {
+    "router": "React Router v6 style paths. `:param` segments are UUIDs.",
+    "auth": "Routes with auth=true redirect unauthenticated users to /login?next=<attempted path>; after login/register the app navigates to `next` (default /).",
+    "mockup": "mockupSection anchors into mockup.html (C1); apiCalls are operationIds from openapi.yaml (D2); the full trigger-level mapping is api-mapping.csv (D3)."
+  },
+  "guards": {
+    "authRedirect": "/login?next=<path>",
+    "afterAuthSuccess": "value of `next`, else /"
+  },
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "screen": "Home",
+      "mockupSection": "#screen-home",
+      "auth": false,
+      "apiCalls": ["listProducts"],
+      "reqIds": ["REQ-003"],
+      "notes": "Hero + 'New arrivals': first 4 products of listProducts?limit=4&sort=newest."
+    },
+    {
+      "id": "login",
+      "path": "/login",
+      "screen": "Login",
+      "mockupSection": "#screen-login",
+      "auth": false,
+      "apiCalls": ["loginUser"],
+      "reqIds": ["REQ-002"],
+      "notes": "Reads optional ?next= query param. Links to /register."
+    },
+    {
+      "id": "register",
+      "path": "/register",
+      "screen": "Register",
+      "mockupSection": "#screen-register",
+      "auth": false,
+      "apiCalls": ["registerUser"],
+      "reqIds": ["REQ-001"],
+      "notes": "Signs the user in on success (201 returns a JWT). Links to /login."
+    },
+    {
+      "id": "products",
+      "path": "/products",
+      "screen": "Products",
+      "mockupSection": "#screen-products",
+      "auth": false,
+      "apiCalls": ["listProducts"],
+      "reqIds": ["REQ-003"],
+      "queryParams": ["page", "search", "category", "sort"],
+      "notes": "Filter sidebar (categories + sort) on Tablet/Desktop; hamburger drawer on Mobile. Grid 1/2/4 columns per breakpoint (NFR-005). Pagination component at bottom."
+    },
+    {
+      "id": "product-details",
+      "path": "/products/:productId",
+      "screen": "Product Details",
+      "mockupSection": "#screen-product-details",
+      "auth": false,
+      "apiCalls": ["getProduct", "addCartItem"],
+      "reqIds": ["REQ-004", "REQ-005"],
+      "notes": "Quantity stepper capped at min(99, stockQuantity) (BR-003). Add to Cart requires login (guard applies on action, not on route entry)."
+    },
+    {
+      "id": "cart",
+      "path": "/cart",
+      "screen": "Cart",
+      "mockupSection": "#screen-cart",
+      "auth": true,
+      "apiCalls": ["getCart", "updateCartItem", "removeCartItem"],
+      "reqIds": ["REQ-006", "REQ-007", "REQ-008"],
+      "notes": "Remove uses the confirm Modal. Empty state links to /products. Checkout button disabled when empty (BR-004)."
+    },
+    {
+      "id": "checkout",
+      "path": "/checkout",
+      "screen": "Checkout",
+      "mockupSection": "#screen-checkout",
+      "auth": true,
+      "apiCalls": ["getCart", "placeOrder"],
+      "reqIds": ["REQ-009"],
+      "notes": "Shipping address form (validation-rules.json `checkout`) + read-only summary with flat 5.00 shipping fee (BR-006). On 201 navigate to /orders/:orderId."
+    },
+    {
+      "id": "order-confirmation",
+      "path": "/orders/:orderId",
+      "screen": "Order Confirmation",
+      "mockupSection": "#screen-order-confirmation",
+      "auth": true,
+      "apiCalls": ["getOrder"],
+      "reqIds": ["REQ-011"],
+      "notes": "Doubles as the order-details view when opened from My Orders; the 'Thank you' banner shows only when arriving from checkout. Unknown/foreign id → 'Order not found.' state."
+    },
+    {
+      "id": "my-orders",
+      "path": "/orders",
+      "screen": "My Orders",
+      "mockupSection": "#screen-my-orders",
+      "auth": true,
+      "apiCalls": ["listOrders"],
+      "reqIds": ["REQ-010"],
+      "queryParams": ["page"],
+      "notes": "Newest first, 10 per page. Row click → /orders/:orderId. Empty state links to /products. Declare BEFORE /orders/:orderId in the router or use exact matching."
+    }
+  ],
+  "globalUi": {
+    "header": {
+      "public": ["logo → /", "Products → /products", "Login → /login", "Register → /register"],
+      "authenticated": ["logo → /", "Products → /products", "cart icon + itemCount badge → /cart", "My Orders → /orders", "Log out (client-side, REQ-012)"],
+      "mobile": "nav collapses behind the hamburger icon (menu.svg) at ≤375px"
+    },
+    "notFound": {
+      "path": "*",
+      "screen": "404 fallback",
+      "notes": "Any unmatched path renders the shared empty-state layout with a link home. Not counted among the 9 screens."
+    }
+  }
+}

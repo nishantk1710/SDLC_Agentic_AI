@@ -1,0 +1,508 @@
+{
+  "artifact": "validation-rules.json",
+  "handoffId": "D4",
+  "owner": "M2",
+  "version": "1.0.0",
+  "conventions": {
+    "fieldNames": "Field names are camelCase exactly as they appear on the wire (see openapi.yaml). Each rule's schemaRef names the snake_case column and/or named constraint in schema.sql that enforces the same thing.",
+    "messages": "The `message` string is the exact user-facing text. The UI (mockup.html annotations) and the API error `details[].message` must both use it verbatim. Tokens in {curly braces} are interpolated at runtime.",
+    "enforcement": "Every rule is enforced server-side; the UI should also enforce it inline on blur/submit. Rules with `httpStatus` other than 400 are business rules surfaced with the listed error code.",
+    "requirementIds": "REQ/BR/NFR references point at extracted-requirements.md (A1)."
+  },
+  "forms": {
+    "register": {
+      "endpoint": "POST /auth/register",
+      "operationId": "registerUser",
+      "requirementIds": ["REQ-001"],
+      "fields": {
+        "fullName": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Full name is required.",
+              "schemaRef": "users.full_name NOT NULL"
+            },
+            {
+              "type": "length",
+              "min": 2,
+              "max": 100,
+              "message": "Full name must be between 2 and 100 characters.",
+              "schemaRef": "users_full_name_length"
+            }
+          ]
+        },
+        "email": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Email is required.",
+              "schemaRef": "users.email NOT NULL"
+            },
+            {
+              "type": "maxLength",
+              "max": 255,
+              "message": "Email must be 255 characters or fewer.",
+              "schemaRef": "users.email VARCHAR(255)"
+            },
+            {
+              "type": "pattern",
+              "pattern": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+              "flags": "i",
+              "message": "Enter a valid email address.",
+              "schemaRef": "users_email_format"
+            },
+            {
+              "type": "unique",
+              "businessRuleId": "BR-001",
+              "httpStatus": 409,
+              "errorCode": "EMAIL_TAKEN",
+              "message": "An account with this email already exists.",
+              "schemaRef": "users_email_unique"
+            }
+          ]
+        },
+        "password": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Password is required.",
+              "schemaRef": "users.password_hash NOT NULL (bcrypt hash stored; policy enforced at the API layer before hashing, NFR-002)"
+            },
+            {
+              "type": "minLength",
+              "min": 8,
+              "businessRuleId": "BR-002",
+              "message": "Password must be at least 8 characters.",
+              "schemaRef": null
+            },
+            {
+              "type": "maxLength",
+              "max": 72,
+              "message": "Password must be 72 characters or fewer.",
+              "schemaRef": null,
+              "note": "72 bytes is the bcrypt input limit."
+            },
+            {
+              "type": "pattern",
+              "pattern": "^(?=.*[A-Za-z])(?=.*[0-9]).+$",
+              "businessRuleId": "BR-002",
+              "message": "Password must contain at least one letter and one number.",
+              "schemaRef": null
+            }
+          ]
+        }
+      }
+    },
+    "login": {
+      "endpoint": "POST /auth/login",
+      "operationId": "loginUser",
+      "requirementIds": ["REQ-002"],
+      "fields": {
+        "email": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Email is required.",
+              "schemaRef": "users.email NOT NULL"
+            },
+            {
+              "type": "pattern",
+              "pattern": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+              "flags": "i",
+              "message": "Enter a valid email address.",
+              "schemaRef": "users_email_format"
+            }
+          ]
+        },
+        "password": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Password is required.",
+              "schemaRef": "users.password_hash NOT NULL"
+            }
+          ]
+        }
+      },
+      "formLevel": [
+        {
+          "type": "credentials",
+          "httpStatus": 401,
+          "errorCode": "INVALID_CREDENTIALS",
+          "message": "Invalid email or password.",
+          "note": "Deliberately does not reveal whether the email exists."
+        }
+      ]
+    },
+    "addCartItem": {
+      "endpoint": "POST /cart/items",
+      "operationId": "addCartItem",
+      "requirementIds": ["REQ-005"],
+      "fields": {
+        "productId": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Product is required.",
+              "schemaRef": "cart_items.product_id NOT NULL"
+            },
+            {
+              "type": "exists",
+              "httpStatus": 404,
+              "errorCode": "NOT_FOUND",
+              "message": "Product not found.",
+              "schemaRef": "cart_items_product_id_fkey"
+            }
+          ]
+        },
+        "quantity": {
+          "rules": [
+            {
+              "type": "integer",
+              "message": "Quantity must be a whole number.",
+              "schemaRef": "cart_items.quantity INTEGER"
+            },
+            {
+              "type": "min",
+              "min": 1,
+              "businessRuleId": "BR-003",
+              "message": "Quantity must be at least 1.",
+              "schemaRef": "cart_items_quantity_range"
+            },
+            {
+              "type": "max",
+              "max": 99,
+              "businessRuleId": "BR-003",
+              "message": "Quantity cannot exceed 99.",
+              "schemaRef": "cart_items_quantity_range"
+            },
+            {
+              "type": "stock",
+              "businessRuleId": "BR-003",
+              "httpStatus": 409,
+              "errorCode": "INSUFFICIENT_STOCK",
+              "message": "Only {stock} left in stock.",
+              "schemaRef": "products.stock_quantity (checked in the service, same transaction)",
+              "note": "If the product is already in the cart, POST merges quantities; the merged total must pass the min/max/stock rules."
+            }
+          ]
+        }
+      }
+    },
+    "updateCartItem": {
+      "endpoint": "PATCH /cart/items/{itemId}",
+      "operationId": "updateCartItem",
+      "requirementIds": ["REQ-007"],
+      "fields": {
+        "quantity": {
+          "rules": [
+            {
+              "type": "integer",
+              "message": "Quantity must be a whole number.",
+              "schemaRef": "cart_items.quantity INTEGER"
+            },
+            {
+              "type": "min",
+              "min": 1,
+              "businessRuleId": "BR-003",
+              "message": "Quantity must be at least 1.",
+              "schemaRef": "cart_items_quantity_range"
+            },
+            {
+              "type": "max",
+              "max": 99,
+              "businessRuleId": "BR-003",
+              "message": "Quantity cannot exceed 99.",
+              "schemaRef": "cart_items_quantity_range"
+            },
+            {
+              "type": "stock",
+              "businessRuleId": "BR-003",
+              "httpStatus": 409,
+              "errorCode": "INSUFFICIENT_STOCK",
+              "message": "Only {stock} left in stock.",
+              "schemaRef": "products.stock_quantity (checked in the service, same transaction)"
+            }
+          ]
+        }
+      }
+    },
+    "checkout": {
+      "endpoint": "POST /orders",
+      "operationId": "placeOrder",
+      "requirementIds": ["REQ-009"],
+      "fields": {
+        "shippingAddress.name": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Recipient name is required.",
+              "schemaRef": "orders.shipping_name NOT NULL"
+            },
+            {
+              "type": "length",
+              "min": 2,
+              "max": 100,
+              "message": "Recipient name must be between 2 and 100 characters.",
+              "schemaRef": "orders_shipping_name_length"
+            }
+          ]
+        },
+        "shippingAddress.line1": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Address line 1 is required.",
+              "schemaRef": "orders.shipping_line1 NOT NULL"
+            },
+            {
+              "type": "maxLength",
+              "max": 255,
+              "message": "Address line 1 must be 255 characters or fewer.",
+              "schemaRef": "orders.shipping_line1 VARCHAR(255)"
+            }
+          ]
+        },
+        "shippingAddress.line2": {
+          "optional": true,
+          "rules": [
+            {
+              "type": "maxLength",
+              "max": 255,
+              "message": "Address line 2 must be 255 characters or fewer.",
+              "schemaRef": "orders.shipping_line2 VARCHAR(255)"
+            }
+          ]
+        },
+        "shippingAddress.city": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "City is required.",
+              "schemaRef": "orders.shipping_city NOT NULL"
+            },
+            {
+              "type": "maxLength",
+              "max": 100,
+              "message": "City must be 100 characters or fewer.",
+              "schemaRef": "orders.shipping_city VARCHAR(100)"
+            }
+          ]
+        },
+        "shippingAddress.postalCode": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Postal code is required.",
+              "schemaRef": "orders.shipping_postal_code NOT NULL"
+            },
+            {
+              "type": "pattern",
+              "pattern": "^[A-Za-z0-9 -]{3,20}$",
+              "message": "Enter a valid postal code.",
+              "schemaRef": "orders_shipping_postal_format"
+            }
+          ]
+        },
+        "shippingAddress.country": {
+          "rules": [
+            {
+              "type": "required",
+              "message": "Country is required.",
+              "schemaRef": "orders.shipping_country NOT NULL"
+            },
+            {
+              "type": "pattern",
+              "pattern": "^[A-Z]{2}$",
+              "message": "Enter a 2-letter country code (e.g. US).",
+              "schemaRef": "orders_shipping_country_format",
+              "note": "ISO 3166-1 alpha-2, uppercase."
+            }
+          ]
+        }
+      },
+      "formLevel": [
+        {
+          "type": "cartNotEmpty",
+          "businessRuleId": "BR-004",
+          "httpStatus": 409,
+          "errorCode": "CART_EMPTY",
+          "message": "Your cart is empty. Add items before checking out.",
+          "schemaRef": "orders_subtotal_positive"
+        },
+        {
+          "type": "stockRecheck",
+          "businessRuleId": "BR-003",
+          "httpStatus": 409,
+          "errorCode": "INSUFFICIENT_STOCK",
+          "message": "Only {stock} left in stock for {productName}.",
+          "schemaRef": "products.stock_quantity (re-checked and decremented atomically at placement)"
+        }
+      ]
+    },
+    "productsQuery": {
+      "endpoint": "GET /products",
+      "operationId": "listProducts",
+      "requirementIds": ["REQ-003"],
+      "fields": {
+        "page": {
+          "optional": true,
+          "default": 1,
+          "rules": [
+            {
+              "type": "integer",
+              "message": "Page must be a whole number.",
+              "schemaRef": null
+            },
+            {
+              "type": "min",
+              "min": 1,
+              "message": "Page must be 1 or greater.",
+              "schemaRef": null
+            }
+          ]
+        },
+        "limit": {
+          "optional": true,
+          "default": 12,
+          "rules": [
+            {
+              "type": "range",
+              "min": 1,
+              "max": 100,
+              "requirementIds": ["NFR-004"],
+              "message": "Limit must be between 1 and 100.",
+              "schemaRef": null
+            }
+          ]
+        },
+        "search": {
+          "optional": true,
+          "rules": [
+            {
+              "type": "maxLength",
+              "max": 100,
+              "message": "Search term must be 100 characters or fewer.",
+              "schemaRef": null
+            }
+          ]
+        },
+        "category": {
+          "optional": true,
+          "rules": [
+            {
+              "type": "maxLength",
+              "max": 50,
+              "message": "Category must be 50 characters or fewer.",
+              "schemaRef": "products.category VARCHAR(50)"
+            }
+          ]
+        },
+        "sort": {
+          "optional": true,
+          "default": "newest",
+          "rules": [
+            {
+              "type": "enum",
+              "values": ["newest", "price_asc", "price_desc", "name_asc", "name_desc"],
+              "message": "Sort must be one of: newest, price_asc, price_desc, name_asc, name_desc.",
+              "schemaRef": null
+            }
+          ]
+        }
+      }
+    },
+    "ordersQuery": {
+      "endpoint": "GET /orders",
+      "operationId": "listOrders",
+      "requirementIds": ["REQ-010"],
+      "fields": {
+        "page": {
+          "optional": true,
+          "default": 1,
+          "rules": [
+            {
+              "type": "integer",
+              "message": "Page must be a whole number.",
+              "schemaRef": null
+            },
+            {
+              "type": "min",
+              "min": 1,
+              "message": "Page must be 1 or greater.",
+              "schemaRef": null
+            }
+          ]
+        },
+        "limit": {
+          "optional": true,
+          "default": 10,
+          "rules": [
+            {
+              "type": "range",
+              "min": 1,
+              "max": 100,
+              "requirementIds": ["NFR-004"],
+              "message": "Limit must be between 1 and 100.",
+              "schemaRef": null
+            }
+          ]
+        }
+      }
+    }
+  },
+  "businessRules": [
+    {
+      "id": "BR-001",
+      "summary": "Each email address may be registered to at most one account.",
+      "enforcedBy": ["users_email_unique"],
+      "errorCode": "EMAIL_TAKEN"
+    },
+    {
+      "id": "BR-002",
+      "summary": "Passwords are 8–72 characters and contain at least one letter and one number; only the bcrypt hash is stored (NFR-002).",
+      "enforcedBy": ["API layer, pre-hash"],
+      "errorCode": "VALIDATION_ERROR"
+    },
+    {
+      "id": "BR-003",
+      "summary": "A cart line's quantity is 1–99 and may never exceed the product's available stock.",
+      "enforcedBy": ["cart_items_quantity_range", "service-layer stock check"],
+      "errorCode": "INSUFFICIENT_STOCK"
+    },
+    {
+      "id": "BR-004",
+      "summary": "An order can only be placed from a non-empty cart; placing the order empties the cart.",
+      "enforcedBy": ["orders_subtotal_positive", "service layer"],
+      "errorCode": "CART_EMPTY"
+    },
+    {
+      "id": "BR-005",
+      "summary": "Product name and unit price are snapshotted onto order_items at placement; later catalogue edits never change past orders.",
+      "enforcedBy": ["order_items.product_name", "order_items.unit_price"],
+      "errorCode": null
+    },
+    {
+      "id": "BR-006",
+      "summary": "A flat shipping fee of 5.00 USD applies to every order; total = subtotal + shippingFee.",
+      "enforcedBy": ["orders.shipping_fee DEFAULT 5.00", "orders_total_consistent"],
+      "errorCode": null
+    },
+    {
+      "id": "BR-007",
+      "summary": "Order status follows PENDING → PAID → SHIPPED → DELIVERED; CANCELLED is allowed only before SHIPPED. See state-transitions.md (B3).",
+      "enforcedBy": ["order_status enum", "service layer"],
+      "errorCode": null
+    }
+  ],
+  "errorCodes": {
+    "VALIDATION_ERROR": { "httpStatus": 400, "description": "One or more fields failed the rules above; details[] lists each field with its exact message." },
+    "INVALID_CREDENTIALS": { "httpStatus": 401, "description": "Login failed. Message: 'Invalid email or password.'" },
+    "UNAUTHORIZED": { "httpStatus": 401, "description": "Missing or invalid JWT. Message: 'Authentication required. Please log in.'" },
+    "NOT_FOUND": { "httpStatus": 404, "description": "Resource does not exist or does not belong to the caller." },
+    "EMAIL_TAKEN": { "httpStatus": 409, "description": "BR-001 violation on register." },
+    "CART_EMPTY": { "httpStatus": 409, "description": "BR-004 violation on checkout." },
+    "INSUFFICIENT_STOCK": { "httpStatus": 409, "description": "BR-003 violation on cart add/update or checkout." },
+    "INTERNAL_ERROR": { "httpStatus": 500, "description": "Unexpected failure. Message: 'Something went wrong. Please try again.'" }
+  }
+}
