@@ -1,0 +1,204 @@
+"""IMP-001 end-to-end suite — every generation/repair test compiles for REAL in the exec-sandbox.
+
+No fakes on the happy path: the real ``mcp_executor`` runs the real compiler; LLM responses are
+recorded once (``RECORD=1``) then replayed (deterministic, zero tokens). The failure-path tests
+sequence hand-authored recordings (``.broken1`` / ``.fixed`` / ``.badjson``) so the REAL compiler
+fails then passes — the compile step is always the sandbox.
+
+Tests 1–5 are ``@integration`` and skip cleanly when ``SANDBOX_MCP_URL`` is absent / unreachable.
+Test 6 (manifest gate) is a pure disk check and runs under ``pytest -m "not integration"``.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import pytest
+
+from app.graph.graph import workflow
+from app.graph.router import REPAIR_CAP
+from app.graph.state import WorkflowState, new_state
+from app.integrations.executor import set_executor
+from app.models import WorkItem
+from app.services import llm_gateway
+from app.services.manifest_gate import check_manifest
+
+integration = pytest.mark.integration
+needs_sandbox = pytest.mark.skipif(
+    not os.environ.get("SANDBOX_MCP_URL"),
+    reason="SANDBOX_MCP_URL not set — exec-sandbox required for real-compile tests",
+)
+
+
+# --------------------------------------------------------------------------- helpers
+
+def _item(plan: list[WorkItem], item_id: str) -> WorkItem:
+    return next(i for i in plan if i.id == item_id)
+
+
+def _run_item(
+    item: WorkItem,
+    executor: Any,
+    gateway: Any,
+    design_package: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    project_id: str = "p1",
+    attempt: int = 7,
+) -> WorkflowState:
+    """Drive the compiled graph for a single work item against the real executor + replay gateway."""
+    monkeypatch.setattr(llm_gateway.llm_gateway, "complete", gateway.complete)
+    monkeypatch.setattr(llm_gateway.llm_gateway, "complete_with_tools", gateway.complete_with_tools)
+    set_executor(executor)
+    initial = new_state(
+        run_id="run-1", attempt=attempt, project_id=project_id,
+        design_package=design_package, work_items=[item],
+    )
+    config = {"configurable": {"thread_id": f"t-{item.id}"}, "recursion_limit": 100}
+    try:
+        workflow.invoke(initial, config)
+        return dict(workflow.get_state(config).values)  # type: ignore[return-value]
+    finally:
+        set_executor(None)
+
+
+def _commit_count(executor: Any, project_id: str = "p1") -> int:
+    """Number of commits in the sandbox project (0 when the repo has no commits yet)."""
+    result = executor.run_command(["git", "rev-list", "--count", "HEAD"], project_id)
+    try:
+        return int(result.stdout.strip())
+    except (ValueError, AttributeError):
+        return 0
+
+
+# --------------------------------------------------------------------------- 1. backend happy path
+
+@integration
+@needs_sandbox
+def test_login_backend_happy_path(dummy_plan, design_package, mcp_executor, fake_gateway, monkeypatch) -> None:
+    item = _item(dummy_plan, "backend-loginUser")  # POST /auth/login, loginUser, REQ-002
+    state = _run_item(item, mcp_executor, fake_gateway, design_package, monkeypatch)
+
+    assert state["generated_code"], "files were written into the sandbox workspace"
+    assert state["gate_result"] is not None and state["gate_result"]["passed"] is True  # REAL compile passed
+    assert _commit_count(mcp_executor) == 1  # commit landed on all-pass
+
+    summary = state["generation_summary"]
+    assert "REQ-002" in summary and "/auth/login" in summary
+    assert state["generation_metrics"]["files_produced"] >= 1
+    assert state["run_id"] == "run-1" and state["attempt"] == 7  # echoed unchanged
+
+    body = "\n".join(mcp_executor.read_file(p) for p in state["generated_code"])
+    assert "Invalid email or password." in body  # 401 message verbatim from validation-rules.json
+
+
+# --------------------------------------------------------------------------- 2. frontend happy path
+
+@integration
+@needs_sandbox
+def test_login_frontend_happy_path(dummy_plan, design_package, mcp_executor, fake_gateway, monkeypatch) -> None:
+    item = _item(dummy_plan, "frontend-login")  # route login, REQ-002
+    state = _run_item(item, mcp_executor, fake_gateway, design_package, monkeypatch)
+
+    assert state["generated_code"]
+    assert state["gate_result"] is not None and state["gate_result"]["passed"] is True  # tsc --noEmit passed
+    assert _commit_count(mcp_executor) == 1
+
+    body = "\n".join(mcp_executor.read_file(p) for p in state["generated_code"])
+    assert _uses_design_tokens(design_package, body)          # generated code uses tokens.json
+    assert _any_validation_message(design_package, body)      # verbatim validation messages present
+
+
+# --------------------------------------------------------------------------- 3. repair loop (real fail -> real pass)
+
+@integration
+@needs_sandbox
+def test_repair_loop_real_fail_then_pass(dummy_plan, design_package, mcp_executor, fake_gateway, monkeypatch) -> None:
+    item = _item(dummy_plan, "backend-loginUser")
+    fake_gateway.use_sequence(["backend-loginUser.broken1", "backend-loginUser.fixed"])
+
+    state = _run_item(item, mcp_executor, fake_gateway, design_package, monkeypatch)
+
+    # codegen -> gate(fail, REAL compile) -> repair -> gate(pass, REAL compile) -> commit (once)
+    assert state["repair_attempt"] == 1
+    assert state["gate_result"] is not None and state["gate_result"]["passed"] is True
+    assert _commit_count(mcp_executor) == 1
+
+
+# --------------------------------------------------------------------------- 4. cap (real fail every time)
+
+@integration
+@needs_sandbox
+def test_cap_real_fail_every_time(dummy_plan, design_package, mcp_executor, fake_gateway, monkeypatch) -> None:
+    item = _item(dummy_plan, "backend-loginUser")
+    fake_gateway.use("backend-loginUser.broken1")  # every attempt serves non-compiling code
+
+    state = _run_item(item, mcp_executor, fake_gateway, design_package, monkeypatch)
+
+    assert state["workflow_status"] == "needs_human_review"
+    assert state["repair_attempt"] == REPAIR_CAP
+    assert _commit_count(mcp_executor) == 0  # NO commit on escalation
+
+
+# --------------------------------------------------------------------------- 5. bad JSON (no files, no commit)
+
+@integration
+@needs_sandbox
+def test_bad_json_records_failure_no_commit(dummy_plan, design_package, mcp_executor, fake_gateway, monkeypatch) -> None:
+    item = _item(dummy_plan, "backend-loginUser")
+    fake_gateway.use("backend-loginUser.badjson")  # invalid JSON served for both attempts
+
+    state = _run_item(item, mcp_executor, fake_gateway, design_package, monkeypatch)
+
+    assert state["generated_code"] == []             # no files written
+    assert "FAILED" in state["generation_summary"]   # item recorded as failed
+    assert _commit_count(mcp_executor) == 0           # no commit
+    assert state["workflow_status"] == "needs_human_review"
+
+
+# --------------------------------------------------------------------------- 6. manifest gate (pure disk check)
+
+def test_manifest_gate_checks_disk_not_claims(dummy_pack_complete, dummy_pack_missing) -> None:
+    assert check_manifest(dummy_pack_complete) == {"ok": True, "missing": []}
+
+    result = check_manifest(dummy_pack_missing)
+    assert result["ok"] is False
+    assert result["missing"] == ["D1", "D2"]  # schema.sql + openapi.yaml
+
+    # the decoy manifest asserts 20/20; the gate ignores the claim and trusts the disk
+    assert (dummy_pack_missing / "index.false-claim.md").exists()
+
+
+# --------------------------------------------------------------------------- verbatim/token helpers
+
+def _validation_messages(design_package: dict[str, Any]) -> list[str]:
+    rules = design_package.get("validation-rules.json")
+    messages: list[str] = []
+
+    def _collect(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in ("message", "msg") and isinstance(value, str):
+                    messages.append(value)
+                else:
+                    _collect(value)
+        elif isinstance(node, list):
+            for value in node:
+                _collect(value)
+
+    _collect(rules)
+    return messages
+
+
+def _any_validation_message(design_package: dict[str, Any], body: str) -> bool:
+    messages = _validation_messages(design_package)
+    return any(msg and msg in body for msg in messages)
+
+
+def _uses_design_tokens(design_package: dict[str, Any], body: str) -> bool:
+    tokens = design_package.get("tokens.json")
+    if not isinstance(tokens, dict):
+        return False
+    # any top-level token group name (e.g. "colors", "spacing", "radius") referenced in the code
+    return any(str(group) in body for group in tokens.keys())

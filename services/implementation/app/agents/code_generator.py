@@ -56,10 +56,12 @@ class CodeGeneratorAgent(BaseAgent):
 
         if files is None:
             self._record_failure(state, work_item, elapsed)
+            state["codegen_ok"] = False  # signals the router to escalate (no gate/commit)
             return state
 
         written = self._write_files(self._resolve_executor(), state, work_item, files)
         self._record_success(state, work_item, written, elapsed)
+        state["codegen_ok"] = True
         state["workflow_status"] = "code_generated"
         return state
 

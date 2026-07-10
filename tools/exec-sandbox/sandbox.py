@@ -109,7 +109,12 @@ def git_diff(project_dir: str = ".") -> str:
 
 
 def git_commit(project_dir: str, message: str) -> dict:
-    """Fixed-path commit: stage all, commit with a fixed identity, return the resulting sha."""
+    """Fixed-path commit: stage all, commit with a fixed identity, return the resulting sha.
+
+    Initializes a git repo on first use so the very first commit of a fresh workspace lands.
+    """
+    if run_command(["git", "rev-parse", "--is-inside-work-tree"], cwd=project_dir)["exit_code"] != 0:
+        run_command(["git", "init"], cwd=project_dir)
     add = run_command(["git", *_GIT_IDENTITY, "add", "-A"], cwd=project_dir)
     if add["exit_code"] != 0:
         return {"committed": False, "sha": None, "stdout": add["stdout"], "stderr": add["stderr"], "exit_code": add["exit_code"]}
