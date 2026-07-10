@@ -55,6 +55,10 @@ repair cap is **~3**, held in `WorkflowState["repair_attempt"]`, and is **SEPARA
 orchestrator's `attempt`**, which this service **echoes and never increments**. `repair_attempt`
 resets to 0 at the start of each new work item.
 
+> **Note for future agents** (code_review, refactoring, …): the orchestrator's `attempt` is
+> never incremented by this service — only the orchestrator owns it. Any local retry/repair loop
+> you add must track its own counter (like `repair_attempt`) and reset it per unit of work.
+
 ### 4. Nodes never call the LLM directly
 
 All model calls go through `self.llm` / `app/services/llm_gateway.py` (guide rule 2) — including

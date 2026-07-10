@@ -69,18 +69,24 @@ def new_state(
     attempt: int,
     project_id: str = "",
     design_package: dict[str, Any] | None = None,
+    work_items: list[WorkItem] | None = None,
 ) -> WorkflowState:
     """Build the initial state for a run.
 
     Identity + input + Code Generation internals get their starting values; downstream agents'
     output fields are left unset (each adds its own). ``repair_attempt`` starts at 0.
+
+    Fails fast on a malformed ``work_items`` (must be a list) rather than crashing deep in the
+    graph loop.
     """
+    if work_items is not None and not isinstance(work_items, list):
+        raise ValueError(f"work_items must be a list, got {type(work_items).__name__}")
     return {
         "project_id": project_id,
         "run_id": run_id,
         "attempt": attempt,
         "design_package": design_package or {},
-        "work_items": [],
+        "work_items": work_items or [],
         "work_item_index": 0,
         "current_work_item": None,
         "generated_code": [],

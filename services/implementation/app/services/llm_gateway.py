@@ -179,4 +179,6 @@ class FakeLLMGateway(LLMGateway):
         max_iters: int = 4,
     ) -> str:
         # Deterministic double: ignore tools, return the next scripted response.
+        # TODO: to catch accidental misuse (repair path calling the wrong method), tests could
+        # script a distinct response here vs. complete() and assert which one was served.
         return self.complete(prompt, system=system)

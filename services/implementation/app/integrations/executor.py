@@ -18,6 +18,12 @@ Implementations:
 
 Agents/nodes obtain the active executor via :func:`get_executor` (set once in the FastAPI
 lifespan via :func:`set_executor`); they never construct one.
+
+Import scope (rules 5-6): execution methods are called only from graph nodes
+(``app/graph/nodes.py``) and agents (``app/agents/``). The MCP client is constructed only here
+and injected once in the app lifespan (``app/main.py``); no other module imports it. The
+sandbox egress allowlist (PyPI + npm only) lives in ``tools/exec-sandbox/`` (``squid.conf`` +
+the root ``docker-compose.yml``).
 """
 
 from __future__ import annotations

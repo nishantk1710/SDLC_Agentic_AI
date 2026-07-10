@@ -12,6 +12,7 @@ This node increments the LOCAL ``repair_attempt`` counter and never touches the 
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.agents.base import BaseAgent
@@ -19,6 +20,8 @@ from app.agents.code_generator import _extract_json
 from app.graph.state import WorkflowState
 from app.integrations.executor import Executor, get_executor
 from app.services.llm_gateway import LLMGateway
+
+logger = logging.getLogger(__name__)
 
 
 class RepairAgent(BaseAgent):
@@ -50,6 +53,14 @@ class RepairAgent(BaseAgent):
         if fixes:
             for entry in fixes:
                 executor.write_file(entry["path"], entry["content"])  # fixed code writes the proposal
+        else:
+            # Proposal didn't parse: write nothing (no partial garbage). The gate re-runs and
+            # will re-fail/escalate; log it so the no-op repair is debuggable.
+            logger.warning(
+                "repair: no valid fix parsed for run %s (attempt %s) — wrote nothing",
+                state.get("run_id"),
+                state.get("repair_attempt"),
+            )
         # NO git_commit, NO gate here — the graph routes back to the fixed gate.
         return state
 
