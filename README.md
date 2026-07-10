@@ -1,420 +1,91 @@
-# Implementation Service
+# SDLC_Agentic_AI
 
-## Overview
+AI-powered SDLC lifecycle automation using autonomous agents to streamline
+planning, development, testing, code review, documentation, deployment, and
+project workflows.
 
-The **Implementation Service** is responsible for transforming the **Design Package** into a complete **Implementation Package**.
+## What this is
 
-It is an independent microservice within the AI SDLC platform and is built using:
-
-* **FastAPI** – REST APIs
-* **LangGraph** – Workflow orchestration
-* **Python** – Agent implementation
-* **LLM (Claude/GPT)** – Code generation and reasoning
-* **PostgreSQL** – Metadata & workflow state
-* **Shared Workspace** – Artifact storage
-
-The service follows a modular architecture where **FastAPI exposes APIs**, **LangGraph orchestrates the workflow**, and **agents perform individual implementation tasks**.
-
----
-
-# Tech Stack
-
-| Layer               | Technology   |
-| ------------------- | ------------ |
-| Language            | Python 3.12+ |
-| API Framework       | FastAPI      |
-| Agent Orchestration | LangGraph    |
-| Validation          | Pydantic     |
-| LLM                 | Claude / GPT |
-| Database            | PostgreSQL   |
-| Version Control     | GitHub       |
-| Security Scan       | Semgrep      |
-| Code Quality        | SonarQube    |
-| Testing             | pytest       |
-| Containerization    | Docker       |
-
----
-
-# Responsibilities
-
-The Implementation Service is responsible for:
-
-* Reading the Design Package
-* Generating application source code
-* Reviewing generated code
-* Refactoring code
-* Debugging implementation issues
-* Generating unit tests
-* Generating documentation
-* Running security analysis
-* Producing the final Implementation Package
-
----
-
-# High-Level Workflow
-
-```text
-Design Package
-      │
-      ▼
-Code Generation Agent
-      │
-      ▼
-Code Review Agent
-      │
-      ▼
-Refactoring Agent
-      │
-      ▼
-Debugging Agent
-      │
-      ▼
-Unit Test Generator
-      │
-      ▼
-Documentation Agent
-      │
-      ▼
-Security Agent
-      │
-      ▼
-Implementation Package
-```
-
-LangGraph orchestrates the above workflow.
-
----
-
-# Folder Structure
-
-```text
-implementation-service/
-
-app/
-
-├── main.py
-
-├── api/
-│   ├── routes.py
-│   ├── request_models.py
-│   └── response_models.py
-
-├── graph/
-│   ├── graph.py
-│   ├── state.py
-│   ├── nodes.py
-│   └── router.py
-
-├── agents/
-│   ├── base.py
-│   ├── code_generator.py
-│   ├── code_review.py
-│   ├── refactoring.py
-│   ├── debugging.py
-│   ├── unit_test.py
-│   ├── documentation.py
-│   └── security.py
-
-├── services/
-│   ├── llm_gateway.py
-│   ├── artifact_service.py
-│   ├── workspace_service.py
-│   ├── parser.py
-│   └── retriever.py
-
-├── integrations/
-│   ├── github.py
-│   ├── figma.py
-│   ├── semgrep.py
-│   ├── sonarqube.py
-│   ├── pytest_runner.py
-│   └── docker.py
-
-├── prompts/
-
-├── templates/
-
-├── workspace/
-
-├── models/
-
-├── config/
-
-├── utils/
-
-└── tests/
-```
-
----
-
-# Architecture
-
-## FastAPI
-
-Responsible for:
-
-* Exposing REST APIs
-* Request validation
-* Authentication (future)
-* Calling LangGraph
-* Returning responses
-
-FastAPI **does not contain agent logic**.
-
----
-
-## LangGraph
-
-LangGraph is the workflow engine of the service.
-
-Responsibilities:
-
-* Execute agents in sequence
-* Maintain workflow state
-* Route based on decisions
-* Retry failed steps
-* Return final execution result
-
-LangGraph **does not generate code**.
-
----
-
-## Agents
-
-Agents perform the actual work.
-
-Current agents:
-
-* Code Generation Agent
-* Code Review Agent
-* Refactoring Agent
-* Debugging Agent
-* Unit Test Generator Agent
-* Documentation Agent
-* Security Agent
-
-Each agent follows a common interface:
-
-```python
-execute(state) -> state
-```
-
-Each agent receives the current workflow state, performs its task, updates the state, and returns it.
-
----
-
-# Shared Workflow State
-
-The LangGraph state contains metadata and artifact locations.
-
-Typical fields include:
-
-* Project ID
-* Design Package
-* Generated Code
-* Review Report
-* Refactored Code
-* Unit Tests
-* Documentation
-* Security Report
-* Workflow Status
-
-Agents should update only the fields they own.
-
----
-
-# Services
-
-## llm_gateway
-
-Centralized LLM communication.
-
-Responsibilities:
-
-* Prompt execution
-* Retry handling
-* Token management
-* Provider abstraction
-* Logging
-
-No agent should call the LLM directly.
-
----
-
-## artifact_service
-
-Responsible for:
-
-* Reading Design Package
-* Saving generated artifacts
-* Packaging outputs
-* Loading previous artifacts
-
----
-
-## workspace_service
-
-Responsible for:
-
-* Project workspace creation
-* Temporary file management
-* Cleanup
-* Archive generation
-
----
-
-## parser
-
-Parses existing source code for analysis.
-
----
-
-## retriever
-
-Provides retrieval-augmented context for the LLM.
-
----
-
-# Integrations
-
-The `integrations` module wraps all external systems.
-
-Examples:
-
-* GitHub
-* Figma
-* Semgrep
-* SonarQube
-* pytest
-* Docker
-
-Business logic should never directly invoke external tools.
-
----
-
-# Prompts
-
-Contains version-controlled prompts for every LLM-powered agent.
-
-Example:
-
-* code_generation.md
-* code_review.md
-* debugging.md
-* documentation.md
-* security.md
-
----
-
-# Templates
-
-Contains starter templates for supported technology stacks.
-
-Examples:
-
-* React
-* FastAPI
-* Spring Boot
-* Node.js
-
----
-
-# Workspace
-
-Stores temporary project artifacts during execution.
-
-Example:
-
-```text
-workspace/
-
-project-001/
-
-design_package/
-
-generated_code/
-
-unit_tests/
-
-reports/
-```
-
----
-
-# API Endpoints
-
-Example endpoints:
+Four SDLC phases, each owned by one team and implemented as an independent
+microservice. A LangGraph **orchestrator** routes work phase-to-phase, runs
+human approval gates, and handles the retry loop. Teams integrate through
+versioned **contracts** — the handoff schemas are the product.
 
 ```
-POST /implementation/start
-
-GET /implementation/status/{projectId}
-
-GET /implementation/result/{projectId}
-
-POST /implementation/retry
+Requirements ──▶ Design ──▶ Implementation ──▶ Testing
+ (Team 1)       (Team 2)      (Team 3)          (Team 4)
 ```
 
----
+## Repository layout
 
-# Development Guidelines
-
-* Keep each agent focused on a single responsibility.
-* Do not embed workflow logic inside agents.
-* Do not call the LLM directly from agents; use `llm_gateway`.
-* Keep business logic separate from API routes.
-* Keep external tool interactions inside `integrations`.
-* Store generated artifacts in the workspace.
-* Update only the relevant fields in the shared LangGraph state.
-* Write unit tests for every new module.
-
----
-
-# Execution Flow
-
-```text
-Client Request
-      │
-      ▼
-FastAPI API
-      │
-      ▼
-LangGraph Workflow
-      │
-      ▼
-Agents
-      │
-      ▼
-Workspace & External Integrations
-      │
-      ▼
-Implementation Package
-      │
-      ▼
-Response
+```
+SDLC_Agentic_AI/
+├─ apps/
+│  ├─ api-gateway/               FastAPI gateway — auth, projects, jobs, status
+│  └─ web/                       React + TS shell (one module per phase)
+│     └─ src/modules/
+│        ├─ requirements/
+│        ├─ design/
+│        ├─ implementation/
+│        └─ testing/
+│
+├─ orchestrator/                 LangGraph pipeline — routes phases, retry loop, gates
+│  ├─ graph/                     StateGraph: nodes = phases, edges = handoffs
+│  ├─ gates/                     human-in-the-loop approval gates
+│  └─ loops/                     FAIL → Implementation retry counter, ERROR → human
+│
+├─ services/                     the four phase microservices (one per team)
+│  ├─ requirements/              Team 1 — RGA (docs → SRS + RTM)
+│  ├─ design/                    Team 2 — SRS → 18-artifact design pack
+│  ├─ implementation/            Team 3 — design pack → working code
+│  └─ testing/                   Team 4 — code → PASS / FAIL / ERROR verdict
+│
+├─ contracts/                    handoff schemas — the product; all teams review
+│  ├─ shared/                    AgentResponse envelope, run metadata, ID rules
+│  ├─ requirements-to-design/
+│  ├─ design-to-implementation/  ← Implementation INPUT (27 inputs, 20 mandatory)
+│  └─ implementation-to-testing/ ← Implementation OUTPUT (A1–A7 + tech-stack.json)
+│
+├─ packages/                     shared libs across services
+│  ├─ schemas/                   generated TS/Pydantic types from contracts
+│  ├─ config/
+│  └─ logging/
+│
+├─ infra/
+│  ├─ db/                        pgvector init scripts
+│  ├─ migrations/                Alembic migrations
+│  └─ ci/                        shared CI configs
+│
+├─ docs/                         architecture, ADRs, runbooks
+├─ .github/workflows/            GitHub Actions
+├─ docker-compose.yml            PostgreSQL + pgvector + Redis for local dev
+├─ .env.example
+├─ CODEOWNERS                    one team per service folder; contracts = all teams
+├─ CONTRIBUTING.md               branching model + PR rules
+└─ README.md
 ```
 
----
+## Team ownership
 
-# Future Enhancements
+| Folder                     | Team   | Responsibility                          |
+| -------------------------- | ------ | --------------------------------------- |
+| `services/requirements/`   | Team 1 | Docs → SRS + RTM                        |
+| `services/design/`         | Team 2 | SRS → 18-artifact design pack           |
+| `services/implementation/` | Team 3 | Design pack → working code              |
+| `services/testing/`        | Team 4 | Code → PASS / FAIL / ERROR verdict      |
+| `contracts/`               | All    | Handoff schemas — changes reviewed by everyone |
 
-* Human-in-the-Loop approvals
-* Multi-LLM support
-* Distributed execution
-* Agent memory
-* Parallel agent execution
-* Plugin-based agent architecture
-* CI/CD integration
-* Incremental code generation
+## Getting started
 
----
+```bash
+git clone https://github.com/nishantk1710/SDLC_Agentic_AI.git
+cd SDLC_Agentic_AI
+cp .env.example .env
+docker compose up -d          # PostgreSQL + pgvector + Redis
+```
 
-# Coding Standards
+Then work inside your team's folder. Read [`CONTRIBUTING.md`](CONTRIBUTING.md)
+for the branching model and PR rules before opening a pull request.
 
-* Follow PEP 8.
-* Use type hints.
-* Prefer dependency injection where appropriate.
-* Keep functions small and focused.
-* Add meaningful logging.
-* Write tests for all new features.
-* Keep modules loosely coupled and reusable.
+> **Status:** scaffolding only. Every folder currently holds a placeholder
+> `README.md` describing its purpose — no application code yet.

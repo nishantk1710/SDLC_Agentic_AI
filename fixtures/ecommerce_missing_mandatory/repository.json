@@ -1,0 +1,68 @@
+{
+  "artifact": "repository.json",
+  "handoffId": "E6",
+  "owner": "M4",
+  "version": "1.0.0",
+  "description": "Repository setup the Implementation service must create for the generated application.",
+  "repository": {
+    "name": "ecommerce-shop",
+    "visibility": "private",
+    "license": "MIT",
+    "defaultBranch": "main",
+    "layout": "monorepo",
+    "packageManager": "npm@10 (workspaces)",
+    "nodeVersion": "20.x (.nvmrc)",
+    "workspaces": {
+      "apps/web": "React 18 + Vite frontend (frontend-structure.json)",
+      "apps/api": "NestJS backend (backend-structure.json)"
+    },
+    "rootFiles": [
+      ".env.example  (copied from the design pack, E2)",
+      ".nvmrc",
+      "docker-compose.yml  (postgres:16 with schema.sql as init script)",
+      "README.md  (quickstart: compose up, npm install, npm run dev)",
+      ".gitignore  (node, dist, .env, coverage)"
+    ]
+  },
+  "branching": {
+    "model": "trunk-based",
+    "protected": ["main"],
+    "workBranches": "feature/<req-id>-<slug>  e.g. feature/req-009-checkout",
+    "mergeMethod": "squash",
+    "rules": {
+      "main": {
+        "requirePullRequest": true,
+        "requiredChecks": ["lint", "typecheck", "test-unit", "test-e2e", "build"],
+        "requiredApprovals": 1,
+        "allowForcePush": false
+      }
+    }
+  },
+  "commits": {
+    "convention": "Conventional Commits",
+    "types": ["feat", "fix", "test", "refactor", "chore", "docs"],
+    "rule": "Reference REQ/BR/NFR ids in the body (SKILL.md §7/§9)."
+  },
+  "ci": {
+    "provider": "GitHub Actions",
+    "workflows": {
+      "ci.yml": {
+        "on": ["pull_request", "push to main"],
+        "jobs": [
+          "lint (eslint + prettier check, both workspaces)",
+          "typecheck (tsc --noEmit, both workspaces)",
+          "test-unit (vitest web, jest api)",
+          "test-e2e (docker compose postgres → api supertest → playwright)",
+          "build (vite build + nest build)"
+        ]
+      }
+    }
+  },
+  "scripts": {
+    "dev": "concurrently: api (nest start --watch :3000) + web (vite :5173)",
+    "db:up": "docker compose up -d",
+    "db:seed": "runs database/seeds (the 8 fixed-UUID products)",
+    "test": "all unit tests",
+    "test:e2e": "api + web end-to-end suites"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "artifact": "backend-structure.json",
+  "handoffId": "E4-BE",
+  "owner": "M4",
+  "version": "1.0.0",
+  "stack": {
+    "runtime": "Node 20",
+    "framework": "NestJS 10 (REST controllers, global prefix /api/v1)",
+    "language": "TypeScript (strict)",
+    "orm": "TypeORM against PostgreSQL 16 (entities mirror schema.sql; schema.sql is authoritative)",
+    "auth": "@nestjs/jwt + passport-jwt bearer strategy (NFR-001), bcrypt cost 12 (NFR-002)",
+    "validation": "class-validator DTOs wired to validation-rules.json messages via a custom exception factory"
+  },
+  "conventions": {
+    "modulePerEntity": "One Nest module per aggregate (auth, users, products, cart, orders). Controllers implement exactly the openapi.yaml operations — same paths, status codes, and operationIds; no extra endpoints.",
+    "errors": "Every thrown HttpException is shaped by GlobalExceptionFilter into the ErrorResponse envelope {error: {code, message, details}} with codes from validation-rules.json errorCodes.",
+    "transactions": "placeOrder runs in a single DB transaction: re-check stock (BR-003) → snapshot lines (BR-005) → decrement stock → insert order + items (BR-006 fee from SHIPPING_FLAT_FEE) → empty cart (BR-004).",
+    "ownership": "Cart and order queries are always scoped by the JWT user id; a foreign resource id yields 404 NOT_FOUND, never 403.",
+    "moneyType": "NUMERIC(10,2) ↔ string in TypeORM; converted to number only at the serialization edge with 2dp."
+  },
+  "tree": {
+    "src/": {
+      "main.ts": "bootstrap: global prefix /api/v1, CORS from CORS_ORIGIN, global pipes + filter",
+      "app.module.ts": "imports Config, Database, Auth, Users, Products, Cart, Orders",
+      "config/": {
+        "configuration.ts": "typed env loading (.env.example is the contract)",
+        "validation.ts": "fails fast on missing/invalid env vars"
+      },
+      "database/": {
+        "database.module.ts": "TypeORM async config from DATABASE_URL",
+        "migrations/": "0001_init.ts generated FROM schema.sql (do not diverge)",
+        "seeds/": "seed-products.ts — the 8 fixed-UUID products from schema.sql"
+      },
+      "common/": {
+        "filters/global-exception.filter.ts": "→ ErrorResponse envelope",
+        "pipes/validation.pipe.ts": "class-validator → 400 VALIDATION_ERROR with details[] (exact messages)",
+        "decorators/current-user.decorator.ts": "",
+        "guards/jwt-auth.guard.ts": "401 UNAUTHORIZED ('Authentication required. Please log in.')"
+      },
+      "auth/": {
+        "auth.module.ts": "",
+        "auth.controller.ts": "POST /auth/register (registerUser), POST /auth/login (loginUser)",
+        "auth.service.ts": "bcrypt hash/verify; creates the user's cart on register (REQ-001); 401 INVALID_CREDENTIALS; 409 EMAIL_TAKEN (BR-001)",
+        "jwt.strategy.ts": "validates bearer tokens, expiry 3600s",
+        "dto/": "RegisterDto, LoginDto — rules from validation-rules.json register/login"
+      },
+      "users/": {
+        "users.module.ts": "",
+        "users.service.ts": "findByEmail/create; no controller (no user-profile endpoints in scope)",
+        "user.entity.ts": "mirrors users table"
+      },
+      "products/": {
+        "products.module.ts": "",
+        "products.controller.ts": "GET /products (listProducts), GET /products/:productId (getProduct)",
+        "products.service.ts": "pagination/search/category/sort per openapi params; isActive only",
+        "product.entity.ts": "mirrors products table",
+        "dto/": "ListProductsQueryDto — rules from validation-rules.json productsQuery"
+      },
+      "cart/": {
+        "cart.module.ts": "",
+        "cart.controller.ts": "GET /cart (getCart), POST /cart/items (addCartItem), PATCH /cart/items/:itemId (updateCartItem), DELETE /cart/items/:itemId (removeCartItem)",
+        "cart.service.ts": "merge-on-add, quantity 1-99 + stock checks (BR-003 → 409 INSUFFICIENT_STOCK); every mutation returns the full cart",
+        "cart.entity.ts": "mirrors carts",
+        "cart-item.entity.ts": "mirrors cart_items",
+        "dto/": "AddCartItemDto, UpdateCartItemDto"
+      },
+      "orders/": {
+        "orders.module.ts": "",
+        "orders.controller.ts": "POST /orders (placeOrder), GET /orders (listOrders), GET /orders/:orderId (getOrder)",
+        "orders.service.ts": "transactional checkout (see conventions); order_number ORD-###### from a sequence; status transitions guard (BR-007, state-transitions.md)",
+        "order.entity.ts": "mirrors orders (status enum: PENDING PAID SHIPPED DELIVERED CANCELLED)",
+        "order-item.entity.ts": "mirrors order_items",
+        "dto/": "PlaceOrderDto/ShippingAddressDto — rules from validation-rules.json checkout"
+      }
+    },
+    "test/": {
+      "app.e2e-spec.ts": "supertest flows per user-features.md acceptance criteria",
+      "unit/": "services with in-memory repositories"
+    }
+  }
+}
