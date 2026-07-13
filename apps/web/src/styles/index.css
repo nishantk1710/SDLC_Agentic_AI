@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-surface text-text font-sans antialiased;
+  }
+
+  h1 {
+    @apply text-h1 font-bold;
+  }
+
+  h2 {
+    @apply text-h2 font-semibold;
+  }
+
+  h3 {
+    @apply text-h3 font-semibold;
+  }
+
+  .text-muted {
+    @apply text-text-secondary;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-md transition-all duration-150 focus:outline-none focus:ring-4 focus:ring-focus-ring focus:ring-offset-0 active:scale-95 px-4 py-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-on-primary hover:opacity-90 active:bg-primary disabled:bg-disabled-bg disabled:text-disabled-text disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply btn bg-surface text-primary border border-primary hover:bg-surface-alt active:bg-surface-alt disabled:bg-disabled-bg disabled:text-disabled-text disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-primary hover:bg-surface-alt active:bg-surface-alt disabled:text-disabled-text disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply btn bg-error text-on-primary hover:opacity-90 disabled:bg-disabled-bg disabled:text-disabled-text disabled:cursor-not-allowed;
+  }
+
+  .input {
+    @apply w-full px-4 py-2 rounded-md border border-border bg-surface text-text placeholder-text-secondary transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-focus-ring disabled:bg-disabled-bg disabled:text-disabled-text disabled:cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply border-error;
+  }
+
+  .card {
+    @apply bg-surface border border-border rounded-md shadow-card;
+  }
+
+  .modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+  }
+
+  .modal-content {
+    @apply bg-surface rounded-md shadow-modal max-w-md w-full mx-4 animate-modal-in;
+  }
+
+  .badge {
+    @apply inline-block px-2 py-1 rounded-pill text-small font-semibold;
+  }
+
+  .badge-pending {
+    @apply text-warning bg-warning/10;
+  }
+
+  .badge-primary {
+    @apply text-primary bg-primary/10;
+  }
+
+  .badge-success {
+    @apply text-success bg-success/10;
+  }
+
+  .badge-warning {
+    @apply text-warning bg-warning/10;
+  }
+
+  .badge-error {
+    @apply text-error bg-error/10;
+  }
+
+  .banner-error {
+    @apply bg-error/10 border border-error rounded-md p-4 text-error font-semibold;
+  }
+
+  .banner-success {
+    @apply bg-success/10 border border-success rounded-md p-4 text-success font-semibold;
+  }
+
+  .spinner {
+    @apply inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Keyframes required by the AutoFlow pipeline dashboard
+   (src/pipeline/SDLCDashboard.tsx). The component references these via
+   Tailwind arbitrary-animation utilities:
+     animate-[loading_1.1s_ease-in-out_infinite]
+     animate-[reveal_0.35s_ease]
+     animate-[dotwave_1.2s_ease-in-out_infinite]
+   --------------------------------------------------------------------------- */
+
+/* Per-agent loader bar */
+@keyframes loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+/* Generated Artifacts panel appearing */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Phase-handoff transition dots */
+@keyframes dotwave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
