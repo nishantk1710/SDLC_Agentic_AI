@@ -1,0 +1,52 @@
+# exec-sandbox stack: the sandboxed MCP execution server + a locked-down egress proxy.
+#
+# Egress mechanism (CLAUDE.md rule 5 — "no network egress except PyPI + npm"):
+#   * exec-sandbox is attached ONLY to `sandbox_internal`, an `internal: true` network — Docker
+#     gives it NO route to the internet. Its sole outbound path is the egress-proxy.
+#   * egress-proxy (squid) is on BOTH `sandbox_internal` and `external`; its squid.conf allows
+#     CONNECT/HTTP only to the PyPI + npm registry domains and denies everything else.
+#   * The sandbox's HTTP(S)_PROXY point at the proxy, so pip/npm reach the registries while all
+#     other destinations are refused. Result: package installs work; general egress is blocked.
+#
+# Reaching the MCP endpoint: services that consume the sandbox (the implementation service /
+# MCPExecutor) join `sandbox_internal` and dial http://exec-sandbox:8080/mcp directly.
+# `internal: true` networks cannot publish ports to the host, so for host-side debugging use:
+#   docker compose exec exec-sandbox python smoke_test.py     # runs echo hi + lists tools
+#   docker compose exec exec-sandbox curl -s localhost:8080/mcp
+
+services:
+  exec-sandbox:
+    build: ./tools/exec-sandbox
+    environment:
+      WORKSPACE_ROOT: /workspace
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8080"
+      COMMAND_TIMEOUT: "120"
+      MAX_OUTPUT_BYTES: "1000000"
+      # All outbound traffic must traverse the allowlist proxy.
+      HTTP_PROXY: http://egress-proxy:3128
+      HTTPS_PROXY: http://egress-proxy:3128
+      NO_PROXY: localhost,127.0.0.1,exec-sandbox
+    volumes:
+      - workspace:/workspace
+    networks:
+      - sandbox_internal          # NO direct internet; only reaches egress-proxy + peers
+    depends_on:
+      - egress-proxy
+
+  egress-proxy:
+    image: ubuntu/squid:latest
+    volumes:
+      - ./tools/exec-sandbox/egress/squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      - sandbox_internal          # reachable by the sandbox
+      - external                  # the ONLY container with outbound internet (allowlisted)
+
+networks:
+  sandbox_internal:
+    internal: true                # containers here have no route off the host network
+  external:
+    driver: bridge
+
+volumes:
+  workspace:

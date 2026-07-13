@@ -1,0 +1,57 @@
+{
+  "additionalProperties": false,
+  "description": "A single, independently generatable unit of work.",
+  "properties": {
+    "endpoints": {
+      "description": "API endpoints covered, e.g. 'POST /login' (FastAPI).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Endpoints",
+      "type": "array"
+    },
+    "id": {
+      "description": "Stable id, e.g. 'WI-001'. Join key for summaries/metrics.",
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "requirement_ids": {
+      "description": "REQ IDs this work item implements (traceability).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirement Ids",
+      "type": "array"
+    },
+    "screens": {
+      "description": "UI screens covered (React/TS).",
+      "items": {
+        "type": "string"
+      },
+      "title": "Screens",
+      "type": "array"
+    },
+    "tables": {
+      "description": "Database tables/entities this work item touches.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Tables",
+      "type": "array"
+    },
+    "target_files": {
+      "description": "Workspace-relative file paths this item should produce.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "WorkItem",
+  "type": "object"
+}

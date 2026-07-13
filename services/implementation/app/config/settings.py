@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Workspace
     workspace_dir: str = "app/workspace"
 
+    # exec-sandbox MCP server (integrations/executor.py :: MCPExecutor)
+    sandbox_enabled: bool = False               # connect the executor in the app lifespan
+    sandbox_mcp_url: str = "http://localhost:8080/mcp"
+    sandbox_mcp_transport: str = "streamable_http"
+
 
 @lru_cache
 def get_settings() -> Settings:

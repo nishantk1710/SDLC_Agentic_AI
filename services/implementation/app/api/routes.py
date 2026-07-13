@@ -3,13 +3,14 @@ workflow; it contains no agent logic itself.
 """
 
 import logging
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
 from app.api.request_models import StartRequest
 from app.api.response_models import StartResponse
 from app.graph.graph import workflow
-from app.graph.state import WorkflowState
+from app.graph.state import WorkflowState, new_state
 
 logger = logging.getLogger(__name__)
 
@@ -19,23 +20,30 @@ router = APIRouter(prefix="/implementation", tags=["implementation"])
 @router.post("/start", response_model=StartResponse)
 def start(request: StartRequest) -> StartResponse:
     """Run the implementation workflow for a design package."""
-    initial: WorkflowState = {
-        "project_id": request.project_id,
-        "design_package": request.design_package,
-        "workflow_status": "started",
-    }
-    # The workflow makes synchronous LLM calls; surface failures as a clean
-    # 502 instead of a raw 500. TODO: move to background execution + a
-    # GET /status/{project_id} endpoint once the pipeline grows.
+    run_id = uuid4().hex
+    initial: WorkflowState = new_state(
+        run_id=run_id,
+        attempt=request.attempt,
+        project_id=request.project_id,
+        design_package=request.design_package,
+    )
+    initial["workflow_status"] = "started"
+
+    # The graph is compiled with a checkpointer (for the HITL interrupt), so invoke needs a
+    # thread id. The workflow makes synchronous LLM calls; surface failures as a clean 502.
+    # TODO: move to background execution + GET /status/{project_id} once the pipeline grows.
+    config = {"configurable": {"thread_id": run_id}, "recursion_limit": 100}
     try:
-        result = workflow.invoke(initial)
+        workflow.invoke(initial, config)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Workflow failed for project %s", request.project_id)
-        raise HTTPException(
-            status_code=502, detail="Implementation workflow failed"
-        ) from exc
+        raise HTTPException(status_code=502, detail="Implementation workflow failed") from exc
+
+    # Read the current state (also correct when the run paused at the human-review interrupt).
+    final = workflow.get_state(config).values
     return StartResponse(
-        project_id=result["project_id"],
-        workflow_status=result.get("workflow_status", "completed"),
-        generated_code=result.get("generated_code"),
+        project_id=final.get("project_id", request.project_id),
+        workflow_status=final.get("workflow_status", "completed"),
+        run_id=final.get("run_id", run_id),
+        generated_code=final.get("generated_code") or [],
     )
