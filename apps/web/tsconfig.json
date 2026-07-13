@@ -13,17 +13,14 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "declaration": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./src",
+    "noEmit": true,
     "paths": {
-      "@/*": ["./*"],
-      "@components/*": ["./components/*"],
-      "@pages/*": ["./pages/*"],
-      "@api/*": ["./api/*"],
-      "@lib/*": ["./lib/*"],
-      "@types/*": ["./types/*"]
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"],
+      "@pages/*": ["./src/pages/*"],
+      "@api/*": ["./src/api/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@types/*": ["./src/types/*"]
     }
   },
   "include": ["src"],

@@ -1,28 +1,15 @@
 import { Routes, Route } from 'react-router-dom'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
-import DashboardPage from '@/pages/DashboardPage'
-import RequirementsPage from '@/pages/RequirementsPage'
-import DesignPage from '@/pages/DesignPage'
-import ImplementationPage from '@/pages/ImplementationPage'
-import TestingPage from '@/pages/TestingPage'
+import SDLCDashboard from '@/pipeline/SDLCDashboard'
 import NotFoundPage from '@/pages/NotFoundPage'
 
+// The AutoFlow pipeline dashboard is a full-screen experience (its own header
+// and landing screen), so it renders full-bleed rather than inside the shared
+// Header/Footer chrome. Routing stays here as the app shell.
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-surface">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/requirements" element={<RequirementsPage />} />
-          <Route path="/design" element={<DesignPage />} />
-          <Route path="/implementation" element={<ImplementationPage />} />
-          <Route path="/testing" element={<TestingPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <Routes>
+      <Route path="/" element={<SDLCDashboard />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   )
 }
