@@ -1,0 +1,11 @@
+# Service-specific ignores for the implementation service.
+# Repo-wide ignores (.env, .venv, __pycache__, node, docker data) live in the
+# root .gitignore — do not duplicate them here.
+
+# Coverage artifacts
+.coverage
+htmlcov/
+
+# Workspace artifacts (generated project outputs during a run)
+app/workspace/*
+!app/workspace/.gitkeep

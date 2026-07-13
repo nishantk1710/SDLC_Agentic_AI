@@ -87,5 +87,7 @@ docker compose up -d          # PostgreSQL + pgvector + Redis
 Then work inside your team's folder. Read [`CONTRIBUTING.md`](CONTRIBUTING.md)
 for the branching model and PR rules before opening a pull request.
 
-> **Status:** scaffolding only. Every folder currently holds a placeholder
-> `README.md` describing its purpose — no application code yet.
+> **Status:** `services/implementation/` now has a working FastAPI + LangGraph
+> scaffold (see its [README](services/implementation/README.md)). Other
+> service folders still hold placeholder `README.md` files — no application
+> code yet.
