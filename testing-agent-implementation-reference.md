@@ -11,9 +11,9 @@ The Testing Agent is **one agent** implemented as a **linear pipeline of five de
 Design principles that every implementation decision must respect:
 
 - **One agent, not many.** The five modules are functions in a pipeline, not sub-agents. There is **no second orchestrator inside this phase** — the flow is a fixed straight line, so there is nothing to orchestrate. The only orchestrator in the whole system is the top-level one that routes *between* phases.
-- **LLM concentrated in one step.** Only Step B (test-case derivation) is primarily LLM-driven. Step A is deterministic with an LLM *fallback*. Steps C, D, and E are pure deterministic code. Fewer LLM calls = cheaper, more reliable, easier to test.
+- **LLM concentrated in the planning steps.** Test-case reasoning is LLM-driven in two places: Step A3 (test-case strategy) and Step B (test-case derivation). Steps A1 (chunking) and A2 (mapping tree) are deterministic tree-sitter/AST passes with an LLM *fallback* only when a language has no grammar. Steps C, D, and E are pure deterministic code. Fewer LLM calls = cheaper, more reliable, easier to test.
 - **Stateless.** The agent never holds retry state. The `attempt` counter is supplied and owned by the orchestrator upstream.
-- **Expected values come from requirements, never from the code.** The interface is read only to learn *how to call* the code; *what to expect* is derived from requirements + design. (See §4 Step A and §7.)
+- **Expected values come from requirements, never from the code.** The interface / mapping tree is read only to learn *how to call* the code; *what to expect* is derived from requirements + design. (See §4 Step A and §7.)
 - **The agent never touches a zip.** The orchestrator validates and extracts; this agent always receives inline `source_code[]`.
 - **Verdict-based control.** Output carries `PASS | FAIL | ERROR`, distinct from HTTP/transport status. A successful call can legitimately return `FAIL`.
 
@@ -27,7 +27,7 @@ These are locked; the rest of the document assumes them.
 |---|---|---|
 | Agent count in this phase | **1 agent, 5 modules** | Linear flow, no coordination to justify sub-agents |
 | Sub-orchestrator inside Testing | **No** | Order is fixed (A→B→C→D→E); an orchestrator would only hardcode a straight line |
-| LLM usage | **Step B only** (+ Step A fallback) | Concentrate reasoning; keep C/D/E deterministic |
+| LLM usage | **Steps A3 + B** (+ A1 fallback) | Concentrate reasoning; keep A1/A2/C/D/E deterministic |
 | Retry / loop control | **Orchestrator (upstream)** | Keeps this agent stateless; one home for coordination |
 | Zip handling | **Orchestrator (upstream)** | Zip-slip / zip-bomb validation lives in exactly one place |
 | Source code delivery | **Inline, pre-extracted, code-only** | No dev-agent reasoning (prevents bias) |
@@ -102,8 +102,10 @@ The orchestrator, **before** calling this agent, must: validate the zip (size ca
 
 ```mermaid
 flowchart LR
-    IN["Input payload"] --> A["A: Interface extraction"]
-    A --> B["B: Test-case derivation (LLM)"]
+    IN["Input payload"] --> A1["A1: Codebase chunking"]
+    A1 --> A2["A2: Mapping tree (JSON)"]
+    A2 --> A3["A3: Test-case strategy planner (LLM)"]
+    A3 --> B["B: Test-case derivation (LLM)"]
     B --> C["C: Test-code generation"]
     C --> D["D: Execution (sandbox)"]
     D --> E["E: Result mapping + report"]
@@ -112,27 +114,60 @@ flowchart LR
 
 | Step | Module(s) | Nature | In → Out |
 |---|---|---|---|
-| A — Interface extraction | `interface_extractor.py` (+ `interface_extractor_llm_fallback.py`) | Deterministic (AST/route introspection) + LLM fallback | `source_code[]` → `interface.json` |
-| B — Test-case derivation | `testcase_planner.py` + `testcase_planner_mcp_adapter.py` + `testcase_planner_router.py` | LLM (direct or via MCP) | `interface.json` + `requirements[]` → `test_cases.json` |
+| A1 — Codebase chunking | `interface_extraction/codebase_chunker.py` (+ `llm_fallback.py`) | Deterministic (tree-sitter AST) + LLM fallback | `source_code[]` → `chunks[]` (symbol-level) |
+| A2 — Mapping tree | `interface_extraction/mapping_tree_builder.py` | Deterministic (graph assembly) | `chunks[]` → `mapping_tree.json` |
+| A3 — Test-case strategy planner | `interface_extraction/testcase_strategy_planner.py` | LLM (adapted from repo `test_strategy_agent.py`) | `mapping_tree.json` + `requirements[]` → `test_strategy.json` |
+| B — Test-case derivation | `testcase_planner.py` + `testcase_planner_mcp_adapter.py` + `testcase_planner_router.py` | LLM (direct or via MCP) | `mapping_tree.json` + `test_strategy.json` + `requirements[]` → `test_cases.json` |
 | C — Test-code generation | `codegen/<runtime>.py` | Deterministic (templates) | `test_cases.json` + `tech_stack` → test files |
 | D — Execution | `runner/<runtime>.py` | Deterministic (sandboxed subprocess/container) | test files → `raw_results.json` |
 | E — Result mapping | `result_mapper.py` + `report_generator.py` | Deterministic map + optional LLM prose | `raw_results.json` + `test_cases.json` → verdict object |
 
-### Step A — Interface extraction (understand the interface, not the internals)
+### Step A — Interface Extraction (a three-step sub-pipeline, not a single pass)
 
-Parse `source_code[]` to extract public APIs, function signatures, class definitions, and expected inputs/outputs. Tech-stack specifics: REST endpoints for FastAPI/Express, React component props, DB schemas (SQL/Mongo). Deterministic first (AST / route introspection); fall back to an LLM only when static parsing fails.
+Interface Extraction is itself a small phase of **three ordered steps** that together turn raw `source_code[]` into a test strategy the rest of the pipeline builds on. What flows to Step B is the **mapping tree JSON** plus the **test strategy** — not a flat `interface.json`.
 
-**Critical rule:** Step A tells B *how to call* the code (signatures, endpoints, prop shapes). It must **not** be used to derive *what the code should return*. Expected outputs come from requirements, not from observed code behavior — otherwise a test will confirm a bug (e.g. a spec says "reject > 120" but buggy code rejects "> 121"; an agent that peeked at the code writes `121 → rejected` and it "passes" on broken code).
+```
+A1  Codebase chunking       →   A2  Codebase mapping tree (JSON)   →   A3  Test-case strategy planner
+    (symbol-level, AST)             (call / dependency graph)              (what to test, priorities)
+```
 
-### Step B — Test-case derivation (the one real LLM step)
+**A1 — Codebase chunking (symbol-level, AST-based).** Parse `source_code[]` with **tree-sitter** (Java / Python / JS / TS) and emit **one chunk per symbol** (class / method / function / interface) — *not* file-level blobs. Chunk boundaries are symbol boundaries, so each chunk becomes a node in A2. Interface extraction and chunking are the *same* parse pass — the signatures pulled from the parse tree are the chunk metadata.
 
-Derive concrete test cases for every requirement — happy paths, boundary values, invalid inputs, error handling — and emit a structured intermediate `test_cases.json` **before** any code is generated (auditable, and the natural human-review surface). Expected values are derived purely from requirements + design.
+> **Do not** copy the RAG-style chunker used elsewhere in this repo (`codebase_summarizer_agent` → `all-MiniLM-L6-v2` + FAISS, one LLM-summarized document per file). That is tuned for "find files relevant to a query" and deliberately blurs internal structure; it cannot produce clean call-graph edges. Symbol-aligned chunking is what makes A2 and A3 possible. Fallback when tree-sitter has no grammar for a language: `RecursiveCharacterTextSplitter.from_language(...)` (chunk_size ≈ 1500, overlap ≈ 200) — coarser, so the mapping tree gets fuzzier.
+
+Each chunk carries the metadata A2/A3 depend on:
+
+```json
+{
+  "symbol_id": "com.auth.LoginService#login",
+  "filename": "src/auth/LoginService.java",
+  "symbol_type": "method",
+  "signature": "public Token login(Creds c)",
+  "content": "public Token login(Creds c){...}",
+  "start_line": 42, "end_line": 71,
+  "calls": ["RateLimiter#check", "TokenStore#issue"],
+  "is_test": false
+}
+```
+
+**A2 — Codebase mapping tree (JSON).** Assemble chunks into a graph keyed by `symbol_id`, with `calls` / `called_by` edges — the call/dependency tree. This JSON is the durable artifact of the phase and is passed downstream *alongside* the strategy. A file-blob chunker cannot produce these edges — this is why A1 must be symbol-aligned.
+
+**A3 — Test-case strategy planner.** Adapted from this repo's `test_strategy_agent.py` (`multi-agent-system/src/agents/utility_agents/`). Given the **mapping tree + requirements**, it produces a *strategy* (not concrete cases): which symbols/files are impacted, the test type (Unit / Integration / E2E / …), a priority (HIGH / MEDIUM / LOW), coverage gaps, and historical risks. It answers *what to test and where*; Step B then derives the concrete cases from that plan.
+
+- **Input:** `{ mapping_tree, requirements[] }`. The reference agent reads a `state` dict and filters `codebase_chunks` with `_is_test_file()`; adapt it to walk mapping-tree nodes and use the `is_test` / `symbol_type` flag instead.
+- **Output (`test_strategy.json`):** `{ test_files_impacted: [{ test_file_path, test_type, what_needs_testing, existing_or_new, reason_retrieved, priority }], test_coverage_impact, historical_test_risks }`.
+
+**Critical rule (unchanged):** Interface Extraction tells B *how to call* the code (signatures, endpoints, prop shapes) and *what areas warrant tests*. It must **not** be used to derive *what the code should return*. Expected outputs come from requirements, not from observed code behavior — otherwise a test will confirm a bug (e.g. a spec says "reject > 120" but buggy code rejects "> 121"; an agent that peeked at the code writes `121 → rejected` and it "passes" on broken code).
+
+### Step B — Test-case derivation (the second LLM step)
+
+Take the **strategy from A3** (what to test, priorities, coverage gaps) plus the requirements, and derive concrete test cases for every requirement — happy paths, boundary values, invalid inputs, error handling. Emit a structured intermediate `test_cases.json` **before** any code is generated (auditable, and the natural human-review surface). Expected values are derived purely from requirements + design; A3 decides *what areas* to cover, B decides the *concrete inputs and expected outputs*.
 
 **MCP integration (additive, never a hard dependency):**
 
 ```mermaid
 flowchart TB
-    REQ["requirements + interface"] --> R{"MCP tool healthy?"}
+    REQ["requirements + mapping tree + strategy"] --> R{"MCP tool healthy?"}
     R -->|yes| M["MCP adapter: call tool, normalize to schema"]
     R -->|"no / timeout / invalid response"| L["Direct LLM planner (fallback)"]
     M --> TC["test_cases.json (same shape either way)"]
@@ -168,12 +203,12 @@ Map raw results back to requirement IDs ("REQ-003 not satisfied due to boundary 
 
 ## 5. The pipeline (reference implementation)
 
-The entire phase is this — five direct calls, no orchestration layer, no retained state:
+The entire phase is this — a straight line of direct calls (Step A expands into its three sub-steps), no orchestration layer, no retained state:
 
 ```python
 # testing_agent/pipeline.py
 from strategies.registry import get_strategy
-from interface_extractor import extract_interface
+from interface_extraction import chunk_codebase, build_mapping_tree, plan_test_strategy
 from testcase_planner_router import plan_test_cases      # decides MCP vs direct-LLM
 from result_mapper import map_results
 from report_generator import build_report
@@ -183,8 +218,12 @@ def run_testing(payload: dict) -> dict:
     tech = payload["tech_stack"]
     strategy = get_strategy(tech["runtime"])                                # python|node|react, else ERROR
 
-    interface   = extract_interface(payload["source_code"], tech)           # A  deterministic (+LLM fallback)
-    test_cases  = plan_test_cases(payload["requirements"], interface)       # B  the one real LLM step
+    # Step A — Interface Extraction (three deterministic-first sub-steps)
+    chunks        = chunk_codebase(payload["source_code"], tech)            # A1 tree-sitter, symbol-level
+    mapping_tree  = build_mapping_tree(chunks)                              # A2 call/dependency graph (JSON)
+    test_strategy = plan_test_strategy(mapping_tree, payload["requirements"])  # A3 what to test (LLM)
+
+    test_cases  = plan_test_cases(payload["requirements"], mapping_tree, test_strategy)  # B  the real LLM step
     test_files  = strategy.generate_tests(test_cases, tech)                 # C  deterministic template
     raw_results = strategy.execute(test_files)                              # D  deterministic sandbox
     verdict     = map_results(raw_results, test_cases, payload["requirements"])  # E  deterministic map
@@ -213,11 +252,11 @@ Routing is a **strategy registry** — `strategies/registry.py` holds `dict[runt
 
 These rules are what make the output trustworthy:
 
-1. **Expected-from-requirements.** Derive expected outputs from requirements + design only; use the interface solely for call shape. Every expected value should be traceable to an acceptance criterion.
+1. **Expected-from-requirements.** Derive expected outputs from requirements + design only; use the interface / mapping tree solely for call shape. Every expected value should be traceable to an acceptance criterion.
 2. **Completeness.** Every `req_id` must map to **≥ 1 test case**. If a requirement produces zero tests, it goes to `untested_requirements`, which forces a non-PASS verdict. ("12 requirements, 0 failed" is meaningless if only 8 were tested.)
 3. **Tests must assert.** Add a meta-check that generated tests contain real assertions — a test that asserts nothing and passes trivially is worse than no test (false confidence). Optionally, a sanity pass: deliberately-wrong code should fail the generated tests.
 4. **Case types (functional scope for the POC):** happy path, boundary values, invalid inputs, error handling. Non-functional testing (load, performance, security thresholds) is deferred (see §8).
-5. **Caching.** Cache `test_cases.json` by a hash of (`requirements` + `interface`) to avoid re-generating identical inputs. Note: even `temperature=0` doesn't guarantee identical output across model versions, so treat the cache as an optimization, not a determinism guarantee.
+5. **Caching.** Cache `test_cases.json` by a hash of (`requirements` + `mapping_tree` + `test_strategy`) to avoid re-generating identical inputs. Note: even `temperature=0` doesn't guarantee identical output across model versions, so treat the cache as an optimization, not a determinism guarantee.
 
 ---
 
@@ -310,7 +349,7 @@ If a review gate *is* wanted inside Testing, the right surface is the **`test_ca
 |---|---|---|---|
 | 0 | Scaffold | Empty running service, `/health`, `/ready` | — |
 | 1 | Contract | Frozen I/O schema + 3 fixtures (Python/Node/React) + intended-FAIL fixture | — |
-| 2 | Planning (A+B, direct LLM) | `test_cases.json`, cache by input hash | Phase 1 |
+| 2 | Planning (A+B, direct LLM) | `mapping_tree.json`, `test_strategy.json`, `test_cases.json`, cache by input hash | Phase 1 |
 | 2b | MCP integration | `testcase_planner_mcp_adapter.py`, router, fallback logic, mock MCP responses | Phase 2 |
 | 3 | Implementation (C+D) | Executed tests, `raw_results.json` | Phase 2, execution model decision |
 | 4 | Validation (E) | Verdict + human report | Phase 3 |
@@ -331,17 +370,21 @@ If a review gate *is* wanted inside Testing, the right surface is the **`test_ca
 **Contract layer**
 - [ ] `contracts/input.schema.json`
 - [ ] `contracts/output.schema.json`
+- [ ] `contracts/mapping_tree.schema.json`
+- [ ] `contracts/test_strategy.schema.json`
 - [ ] `contracts/test_cases.schema.json`
 
-**Step A**
-- [ ] `interface_extractor.py`
-- [ ] `interface_extractor_llm_fallback.py`
+**Step A — Interface Extraction (A1 → A2 → A3)**
+- [ ] `interface_extraction/codebase_chunker.py` (A1 — tree-sitter, symbol-level chunks)
+- [ ] `interface_extraction/mapping_tree_builder.py` (A2 — call/dependency graph → JSON)
+- [ ] `interface_extraction/testcase_strategy_planner.py` (A3 — adapted from repo `test_strategy_agent.py`)
+- [ ] `interface_extraction/llm_fallback.py` (A1 fallback when no tree-sitter grammar exists)
 
 **Step B**
 - [ ] `testcase_planner.py` (direct LLM, primary/fallback path)
 - [ ] `testcase_planner_mcp_adapter.py` (MCP call + response normalization)
 - [ ] `testcase_planner_router.py` (MCP vs direct-LLM decision + fallback)
-- [ ] `cache.py` (hash of requirements + interface)
+- [ ] `cache.py` (hash of requirements + mapping_tree + test_strategy)
 
 **Step C**
 - [ ] `codegen/python.py`
@@ -388,7 +431,7 @@ If a review gate *is* wanted inside Testing, the right surface is the **`test_ca
 | Owner | Scope | Modules |
 |---|---|---|
 | **Person 1 — Contract, Scaffold & Validation** | Defines the shared contract, wires the system together, owns the final verdict | Service skeleton, `/health` & `/ready`, all JSON Schemas, `result_mapper.py`, `report_generator.py`, `tests/test_contract.py`, `tests/stub_orchestrator.py`, sandbox-model write-up |
-| **Person 2 — Planning (A+B, MCP)** | Everything before a test file is generated; the LLM-heavy track | `interface_extractor.py` (+ fallback), `testcase_planner.py`, `testcase_planner_mcp_adapter.py`, `testcase_planner_router.py`, cache, `tests/mock_llm_responses/`, `tests/mock_mcp_responses/` |
+| **Person 2 — Planning (A+B, MCP)** | Everything before a test file is generated; the LLM-heavy track | `interface_extraction/*` (chunker, mapping-tree builder, strategy planner, fallback), `testcase_planner.py`, `testcase_planner_mcp_adapter.py`, `testcase_planner_router.py`, cache, `tests/mock_llm_responses/`, `tests/mock_mcp_responses/` |
 | **Person 3 — Implementation (C+D, infra)** | Turning test cases into real, safely-executed tests | `codegen/*`, `runner/*`, `db_harness/*`, `sandbox/`, `strategies/registry.py` |
 
 ### Build sequence
@@ -440,13 +483,18 @@ testing_agent/
 ├── contracts/
 │   ├── input.schema.json
 │   ├── output.schema.json
+│   ├── mapping_tree.schema.json
+│   ├── test_strategy.schema.json
 │   └── test_cases.schema.json
-├── interface_extractor.py             # Step A
-├── interface_extractor_llm_fallback.py
+├── interface_extraction/              # Step A (three sub-steps)
+│   ├── codebase_chunker.py            # A1 — tree-sitter, symbol-level
+│   ├── mapping_tree_builder.py        # A2 — call/dependency graph -> JSON
+│   ├── testcase_strategy_planner.py   # A3 — adapted from repo test_strategy_agent.py
+│   └── llm_fallback.py                # A1 fallback (no grammar)
 ├── testcase_planner.py                # Step B — direct LLM
 ├── testcase_planner_mcp_adapter.py    # Step B — MCP path
 ├── testcase_planner_router.py         # Step B — router + fallback
-├── cache.py                           # hash(requirements + interface)
+├── cache.py                           # hash(requirements + mapping_tree + test_strategy)
 ├── codegen/
 │   ├── python.py
 │   ├── node.py
@@ -481,4 +529,4 @@ testing_agent/
 
 ## Summary
 
-One agent, five internal modules, one primary LLM step (B) with an optional MCP-backed alternate path and a guaranteed direct-LLM fallback. No sub-orchestrator inside the phase — the flow is a fixed linear pipeline, and the only orchestrator in the system routes between phases and owns the retry loop. Source code always arrives pre-extracted; this agent never touches a zip. Three people build in parallel from Gate 1 onward once the contract and fixtures are frozen. Trust comes from three rules: expected values trace to requirements (not code), every requirement is provably tested (or marked untested), and failures are adjudicated as code-vs-test before the loop routes them.
+One agent, five internal modules. Step A (Interface Extraction) is a three-step sub-pipeline — symbol-level codebase chunking (A1) → mapping tree JSON (A2) → test-case strategy planner (A3, adapted from the repo's `test_strategy_agent.py`) — feeding two LLM planning steps overall (A3 strategy + B derivation), with an optional MCP-backed alternate path and a guaranteed direct-LLM fallback. No sub-orchestrator inside the phase — the flow is a fixed linear pipeline, and the only orchestrator in the system routes between phases and owns the retry loop. Source code always arrives pre-extracted; this agent never touches a zip. Three people build in parallel from Gate 1 onward once the contract and fixtures are frozen. Trust comes from three rules: expected values trace to requirements (not code), every requirement is provably tested (or marked untested), and failures are adjudicated as code-vs-test before the loop routes them.
