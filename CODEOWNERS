@@ -1,0 +1,30 @@
+# CODEOWNERS — who must review changes to each area.
+# One owner per service folder; contracts are reviewed by ALL owners.
+# GitHub requests review from the owner automatically on matching PRs.
+#
+# NOTE: each email must be added to the owner's GitHub account and that account
+# must have write access to this repo, or GitHub silently ignores the rule.
+#
+#   Phase           Owner
+#   Requirements    nishant.khalkar@zensar.com
+#   Design          abhishek.pandit@zensar.com
+#   Implementation  khushi.patil@zensar.com
+#   Testing         piyush.nashikkar@zensar.com
+
+# Fallback owner for anything not matched below (all four leads)
+*                                   nishant.khalkar@zensar.com abhishek.pandit@zensar.com khushi.patil@zensar.com piyush.nashikkar@zensar.com
+
+# --- Phase services (one owner each) ---
+/services/requirements/             nishant.khalkar@zensar.com
+/services/design/                   abhishek.pandit@zensar.com
+/services/implementation/           khushi.patil@zensar.com
+/services/testing/                  piyush.nashikkar@zensar.com
+
+# --- Web UI modules follow the same split ---
+/apps/web/src/modules/requirements/     nishant.khalkar@zensar.com
+/apps/web/src/modules/design/           abhishek.pandit@zensar.com
+/apps/web/src/modules/implementation/   khushi.patil@zensar.com
+/apps/web/src/modules/testing/          piyush.nashikkar@zensar.com
+
+# --- Contracts: the product. Every owner must approve any change. ---
+/contracts/                         nishant.khalkar@zensar.com abhishek.pandit@zensar.com khushi.patil@zensar.com piyush.nashikkar@zensar.com
