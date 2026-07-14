@@ -1,10 +1,17 @@
 """Configuration for the Source Loader Service.
 
-Paths default to the repo layout but are overridable via environment variables
+Defaults follow the repo layout but are overridable via environment variables
 (prefix ``SOURCE_LOADER_``) so the same module runs in local dev, tests, and the
-containerized testing phase. Safety limits guard against zip bombs and runaway
-archives; tune them per the sidecar's resource caps once those are signed off
-(reference §3, §12).
+containerized testing phase.
+
+Sources are the contract *handoff* folders (each upstream phase drops its output
+where the next phase reads it). They are expressed as opaque location strings so
+the same config works whether the backend is local disk or, later, cloud object
+storage — see ``storage.py`` and ``storage_backend`` below. Destinations are
+always local (the phase's working input tree).
+
+Safety limits guard against zip bombs and runaway archives; tune them per the
+sidecar's resource caps once those are signed off (reference §3, §12).
 """
 
 from __future__ import annotations
@@ -17,10 +24,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # config.py -> source-loader-service -> testing -> services -> <repo root>
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-_DEFAULT_ZIP_SOURCE_DIR = REPO_ROOT / "contracts" / "shared" / "zipped_code"
-_DEFAULT_UNZIP_DEST_DIR = (
-    REPO_ROOT / "services" / "testing" / "data" / "input" / "unzipped-code"
-)
+_CONTRACTS = REPO_ROOT / "contracts"
+_INPUT = REPO_ROOT / "services" / "testing" / "data" / "input"
 
 
 class Settings(BaseSettings):
@@ -30,36 +35,41 @@ class Settings(BaseSettings):
         env_prefix="SOURCE_LOADER_", env_file=".env", extra="ignore"
     )
 
-    # --- Paths ---
-    zip_source_dir: Path = Field(
-        default=_DEFAULT_ZIP_SOURCE_DIR,
-        description="Fixed directory the zip artifact is fetched from.",
+    # --- Storage backend ---
+    # Which StorageBackend fetches sources: "local" today; "s3"/"gcs"/... later.
+    storage_backend: str = Field(default="local")
+
+    # --- Sources (contract handoff folders; opaque location strings) ---
+    zip_source: str = Field(
+        default=str(_CONTRACTS / "implementation-to-testing"),
+        description="Where the zipped source code is fetched from (impl -> testing).",
     )
+    srs_source: str = Field(
+        default=str(_CONTRACTS / "requirements-to-design"),
+        description="Where the SRS is fetched from (requirements -> design).",
+    )
+    design_source: str = Field(
+        default=str(_CONTRACTS / "design-to-implementation"),
+        description="Where the design artifact is fetched from (design -> impl).",
+    )
+
+    # --- Destinations (always local working tree) ---
     unzip_dest_dir: Path = Field(
-        default=_DEFAULT_UNZIP_DEST_DIR,
+        default=_INPUT / "unzipped-code",
         description="Where extracted source code is written.",
     )
-    srs_source_dir: Path = Field(
-        default=REPO_ROOT / "contracts" / "shared" / "SRS",
-        description="Fixed directory the SRS (requirements) artifact is fetched from.",
-    )
     srs_dest_dir: Path = Field(
-        default=REPO_ROOT / "services" / "testing" / "data" / "input" / "SRS",
+        default=_INPUT / "SRS",
         description="Where the SRS artifact is copied to (any file type).",
     )
-    design_source_dir: Path = Field(
-        default=REPO_ROOT / "contracts" / "shared" / "design-artifact",
-        description="Fixed directory the design artifact is fetched from.",
-    )
     design_dest_dir: Path = Field(
-        default=REPO_ROOT
-        / "services"
-        / "testing"
-        / "data"
-        / "input"
-        / "design-artifact",
+        default=_INPUT / "design-artifact",
         description="Where the design artifact is copied to (any file type).",
     )
+
+    # --- Non-artifact files present in a source that must never be loaded ---
+    # e.g. the contract's own README.md schema doc sits alongside the payload.
+    ignore_names: tuple[str, ...] = ("README.md", ".gitkeep")
 
     # --- Safety limits (zip-bomb / abuse guards) ---
     max_file_bytes: int = Field(

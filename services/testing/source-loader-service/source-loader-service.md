@@ -1,25 +1,34 @@
 # Source Loader Service — Testing Phase (Team 4)
 
-First stage of the testing phase. Fetches inputs from **fixed paths** under
-`contracts/shared/` and places them in the testing phase's input tree:
+First stage of the testing phase. Fetches inputs from the **contract handoff
+folders** (each upstream phase drops its output where the next phase reads it)
+and places them in the testing phase's input tree:
 
-| Input | From | To | How |
+| Input | From (contract handoff) | To | How |
 |---|---|---|---|
-| Source code | `contracts/shared/zipped_code/*.zip` | `data/input/unzipped-code/` | safe extraction |
-| SRS (requirements) | `contracts/shared/SRS/` | `data/input/SRS/` | verbatim copy, any file type |
-| Design artifact | `contracts/shared/design-artifact/` | `data/input/design-artifact/` | verbatim copy, any file type |
+| Source code | `contracts/implementation-to-testing/*.zip` | `data/input/unzipped-code/` | safe extraction |
+| SRS (requirements) | `contracts/requirements-to-design/` | `data/input/SRS/` | verbatim copy, any file type |
+| Design artifact | `contracts/design-to-implementation/` | `data/input/design-artifact/` | verbatim copy, any file type |
 
 The zip is extracted **safely** (see below) into clean, inline source. The SRS
 and design artifacts are **pass-through** — copied verbatim, not parsed (the
 reference design treats requirements/design as structured data that travels
-alongside the source, §1).
+alongside the source, §1). The contract's own `README.md` and `.gitkeep` live in
+the same folder and are skipped (`cfg.ignore_names`).
 
 > The reference design treats this as an *in-process module* of the testing
-> phase. This FastAPI layer is a thin, testable wrapper over `load_source()` —
-> the pipeline can also import and call that function directly.
->
-> How the zip *actually* arrives (upload vs. path vs. contract reference) is TBD
-> with the implementation team; for now the source is a fixed directory.
+> phase. This FastAPI layer is a thin, testable wrapper over the loader
+> functions — the pipeline can also import and call them directly.
+
+## Storage backend (future-proofing)
+
+Sources are fetched through a `StorageBackend` (`storage.py`), **not** direct
+filesystem calls. Today the only backend is `LocalStorage` (local disk). Moving
+a source to cloud object storage later (S3 / GCS / Azure Blob) is one new
+`StorageBackend` subclass + one branch in `get_storage()` — **no loader logic
+changes**. A source location is an opaque string the backend interprets: a
+directory path for local, a bucket/prefix for cloud. Select via
+`SOURCE_LOADER_STORAGE_BACKEND` (default `local`).
 
 ## Safety (option-2 extraction)
 
@@ -45,20 +54,22 @@ services/testing/
 ├─ requirements.txt          shared by the whole testing phase
 ├─ .venv/                     shared venv
 └─ source-loader-service/
-   ├─ config.py               paths + safety limits (env prefix SOURCE_LOADER_)
+   ├─ config.py               sources, destinations, limits (env SOURCE_LOADER_)
    ├─ exceptions.py           SourceLoadError
    ├─ models.py               LoadResult / ArtifactLoadResult / ExtractedFile
+   ├─ storage.py              StorageBackend abstraction + LocalStorage
    ├─ fsutil.py               shared dir reset (preserves .gitkeep)
    ├─ source_loader.py        safe zip extractor (core)
-   ├─ artifact_loader.py      pass-through copy for SRS (any file type)
+   ├─ artifact_loader.py      pass-through copy for SRS + design (any file type)
    ├─ main.py                 FastAPI: /health, /ready, /load, /load-srs, /load-design
    ├─ conftest.py             puts the flat modules on sys.path for pytest
    └─ tests/
 ```
 
-Local data is **git-ignored** (both `services/testing/data/**` and the
-`contracts/shared/*` payloads), but the folder structure is kept via `.gitkeep`
-placeholders — which the loaders never copy or delete.
+Payloads are **git-ignored** — both `services/testing/data/**` and the
+`contracts/*-to-*` handoff artifacts — while the folder structure and each
+contract's `README.md` / `.gitkeep` stay tracked. The loaders never copy or
+delete those placeholders.
 
 ## Run
 
@@ -83,11 +94,12 @@ Endpoints (no body):
 
 | Var | Default |
 |---|---|
-| `SOURCE_LOADER_ZIP_SOURCE_DIR` | `contracts/shared/zipped_code` |
+| `SOURCE_LOADER_STORAGE_BACKEND` | `local` |
+| `SOURCE_LOADER_ZIP_SOURCE` | `contracts/implementation-to-testing` |
 | `SOURCE_LOADER_UNZIP_DEST_DIR` | `services/testing/data/input/unzipped-code` |
-| `SOURCE_LOADER_SRS_SOURCE_DIR` | `contracts/shared/SRS` |
+| `SOURCE_LOADER_SRS_SOURCE` | `contracts/requirements-to-design` |
 | `SOURCE_LOADER_SRS_DEST_DIR` | `services/testing/data/input/SRS` |
-| `SOURCE_LOADER_DESIGN_SOURCE_DIR` | `contracts/shared/design-artifact` |
+| `SOURCE_LOADER_DESIGN_SOURCE` | `contracts/design-to-implementation` |
 | `SOURCE_LOADER_DESIGN_DEST_DIR` | `services/testing/data/input/design-artifact` |
 | `SOURCE_LOADER_MAX_FILE_BYTES` | 50 MiB |
 | `SOURCE_LOADER_MAX_TOTAL_BYTES` | 500 MiB |

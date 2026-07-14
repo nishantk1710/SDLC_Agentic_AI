@@ -1,44 +1,48 @@
-"""Pass-through artifact loading (SRS, and later the design artifact).
+"""Pass-through artifact loading (SRS and the design artifact).
 
 Unlike the source code (which arrives zipped and is extracted), the SRS and
-design artifacts are copied **verbatim** from ``contracts/shared`` into the
-testing phase's input tree — any file type, no parsing. The reference design
-calls these "structured data that passes through alongside the source code"
-(§1); this loader is just the fetch-and-place step.
+design artifacts are copied **verbatim** from their contract handoff locations
+into the testing phase's input tree — any file type, no parsing. The reference
+design calls these "structured data that passes through alongside the source
+code" (§1); this loader is just the fetch-and-place step.
 
-Structure placeholders (``.gitkeep``) are neither copied nor removed.
+Reads go through a ``StorageBackend`` (local disk today, cloud later). The
+contract's own bookkeeping files (``README.md`` schema doc, ``.gitkeep``) live
+alongside the payload in the source and are skipped via ``cfg.ignore_names``.
+Structure placeholders in the destination (``.gitkeep``) are preserved.
 """
 
 from __future__ import annotations
 
 import logging
-import shutil
-from pathlib import Path
 
 from config import Settings, settings
 from exceptions import SourceLoadError
-from fsutil import KEEP_NAMES, reset_dir
+from fsutil import reset_dir
 from models import ArtifactLoadResult, ExtractedFile
+from storage import get_storage
 
 logger = logging.getLogger(__name__)
 
 
 def _copy_artifact(
-    name: str, source_dir: Path, dest_dir: Path
+    name: str, source: str, dest_dir, cfg: Settings
 ) -> ArtifactLoadResult:
-    """Copy every file under ``source_dir`` into ``dest_dir``, recursively.
+    """Copy every payload file under ``source`` into ``dest_dir``.
 
     Args:
         name: label for the artifact (e.g. ``"SRS"``), used in logs/result.
-        source_dir: fixed directory the artifact is fetched from.
-        dest_dir: where the artifact is copied to.
+        source: contract handoff location the artifact is fetched from.
+        dest_dir: local directory the artifact is copied to.
+        cfg: settings (storage backend + ignore list).
 
     Raises:
-        SourceLoadError: if the source directory is missing.
+        SourceLoadError: if the source location is missing.
     """
-    if not source_dir.is_dir():
+    store = get_storage(cfg.storage_backend)
+    if not store.exists(source):
         raise SourceLoadError(
-            "no_artifact_dir", f"{name} source directory does not exist: {source_dir}"
+            "no_artifact_dir", f"{name} source location does not exist: {source}"
         )
 
     dest_root = dest_dir.resolve()
@@ -47,19 +51,16 @@ def _copy_artifact(
     copied: list[ExtractedFile] = []
     total_bytes = 0
 
-    for src in sorted(source_dir.rglob("*")):
-        if src.is_dir() or src.name in KEEP_NAMES:
-            continue
-        rel = src.relative_to(source_dir)
-        target = dest_root / rel
+    for key in store.list_files(source, ignore_names=cfg.ignore_names):
+        data = store.read_bytes(source, key)
+        target = dest_root / key
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, target)
-        size = src.stat().st_size
-        total_bytes += size
-        copied.append(ExtractedFile(path=rel.as_posix(), size_bytes=size))
+        target.write_bytes(data)
+        total_bytes += len(data)
+        copied.append(ExtractedFile(path=key, size_bytes=len(data)))
 
     if not copied:
-        logger.warning("%s source directory is empty: %s", name, source_dir)
+        logger.warning("%s source location is empty: %s", name, source)
 
     logger.info(
         "Loaded %s: %d files, %d bytes -> %s",
@@ -72,7 +73,7 @@ def _copy_artifact(
     return ArtifactLoadResult(
         status="OK",
         artifact=name,
-        source_dir=str(source_dir),
+        source_dir=source,
         dest_dir=str(dest_root),
         file_count=len(copied),
         total_bytes=total_bytes,
@@ -81,12 +82,12 @@ def _copy_artifact(
 
 
 def load_srs(cfg: Settings = settings) -> ArtifactLoadResult:
-    """Pull the SRS (requirements) artifact from ``contracts/shared/SRS`` into
-    the testing phase's input tree. Any file type is copied verbatim."""
-    return _copy_artifact("SRS", cfg.srs_source_dir, cfg.srs_dest_dir)
+    """Pull the SRS (requirements) artifact from its contract handoff location
+    (``requirements-to-design``) into the input tree. Any file type, verbatim."""
+    return _copy_artifact("SRS", cfg.srs_source, cfg.srs_dest_dir, cfg)
 
 
 def load_design(cfg: Settings = settings) -> ArtifactLoadResult:
-    """Pull the design artifact from ``contracts/shared/design-artifact`` into
-    the testing phase's input tree. Any file type is copied verbatim."""
-    return _copy_artifact("design", cfg.design_source_dir, cfg.design_dest_dir)
+    """Pull the design artifact from its contract handoff location
+    (``design-to-implementation``) into the input tree. Any file type, verbatim."""
+    return _copy_artifact("design", cfg.design_source, cfg.design_dest_dir, cfg)

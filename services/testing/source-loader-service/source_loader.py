@@ -1,8 +1,10 @@
 """Safe zip extraction — the heart of the Source Loader Service.
 
-Strategy (option 2, per design discussion): iterate ``ZipFile.infolist()`` and
-validate every entry *before* writing it, rather than trusting ``extractall``.
-Guards, in order, against:
+The zip is fetched through a ``StorageBackend`` (local disk today, cloud object
+storage later) as raw bytes, then extracted in memory. Strategy (option 2, per
+design discussion): iterate ``ZipFile.infolist()`` and validate every entry
+*before* writing it, rather than trusting ``extractall``. Guards, in order,
+against:
 
   * **Zip-slip / path traversal** — the resolved target must stay inside the
     destination root (absolute paths and ``..`` segments are rejected).
@@ -18,6 +20,7 @@ caller maps that to an ``ERROR`` verdict.
 
 from __future__ import annotations
 
+import io
 import logging
 import shutil
 import stat
@@ -28,6 +31,7 @@ from config import Settings, settings
 from exceptions import SourceLoadError
 from fsutil import reset_dir
 from models import ExtractedFile, LoadResult
+from storage import StorageBackend, get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +39,18 @@ logger = logging.getLogger(__name__)
 _S_IFMT_SHIFT = 16
 
 
-def _find_zip(source_dir: Path) -> Path:
-    """Locate the single ``*.zip`` in the fixed source directory."""
-    if not source_dir.is_dir():
+def _find_zip_key(store: StorageBackend, root: str, cfg: Settings) -> str:
+    """Locate the single ``*.zip`` under the source location."""
+    if not store.exists(root):
         raise SourceLoadError(
-            "no_zip_found", f"Zip source directory does not exist: {source_dir}"
+            "no_zip_found", f"Zip source location does not exist: {root}"
         )
-    zips = sorted(source_dir.glob("*.zip"))
-    if not zips:
-        raise SourceLoadError("no_zip_found", f"No .zip file found in {source_dir}")
-    if len(zips) > 1:
-        logger.warning(
-            "Multiple zips in %s; using first: %s", source_dir, zips[0].name
-        )
-    return zips[0]
+    zip_keys = store.list_files(root, suffix=".zip", ignore_names=cfg.ignore_names)
+    if not zip_keys:
+        raise SourceLoadError("no_zip_found", f"No .zip file found in {root}")
+    if len(zip_keys) > 1:
+        logger.warning("Multiple zips in %s; using first: %s", root, zip_keys[0])
+    return zip_keys[0]
 
 
 def _is_symlink(info: zipfile.ZipInfo) -> bool:
@@ -73,15 +75,13 @@ def _safe_target(dest_root: Path, name: str) -> Path:
     return target
 
 
-def load_source(
-    zip_path: Path | None = None, cfg: Settings = settings
-) -> LoadResult:
-    """Fetch the zip from the fixed path and extract it safely.
+def load_source(cfg: Settings = settings) -> LoadResult:
+    """Fetch the zipped source code from its contract handoff location and
+    extract it safely into the local input tree.
 
     Args:
-        zip_path: explicit zip to load; if ``None``, the single zip in
-            ``cfg.zip_source_dir`` is used.
-        cfg: settings (paths + limits); defaults to the module-level singleton.
+        cfg: settings (sources, destinations, limits); defaults to the
+            module-level singleton.
 
     Returns:
         A ``LoadResult`` with ``status="OK"`` and a manifest of written files.
@@ -89,12 +89,13 @@ def load_source(
     Raises:
         SourceLoadError: on any validation or extraction failure.
     """
-    zip_path = zip_path or _find_zip(cfg.zip_source_dir)
+    store = get_storage(cfg.storage_backend)
+    zip_key = _find_zip_key(store, cfg.zip_source, cfg)
+    data = store.read_bytes(cfg.zip_source, zip_key)
+    zip_name = Path(zip_key).name
 
-    if not zip_path.is_file():
-        raise SourceLoadError("no_zip_found", f"Zip file not found: {zip_path}")
-    if not zipfile.is_zipfile(zip_path):
-        raise SourceLoadError("not_a_zip", f"Not a valid zip archive: {zip_path}")
+    if not zipfile.is_zipfile(io.BytesIO(data)):
+        raise SourceLoadError("not_a_zip", f"Not a valid zip archive: {zip_key}")
 
     dest_root = cfg.unzip_dest_dir.resolve()
     reset_dir(dest_root)
@@ -104,7 +105,7 @@ def load_source(
     total_bytes = 0
 
     try:
-        with zipfile.ZipFile(zip_path) as zf:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
             infos = zf.infolist()
             if len(infos) > cfg.max_files:
                 raise SourceLoadError(
@@ -169,7 +170,7 @@ def load_source(
 
     logger.info(
         "Loaded %s: %d files, %d bytes (%d skipped) -> %s",
-        zip_path.name,
+        zip_name,
         len(extracted),
         total_bytes,
         len(skipped),
@@ -178,7 +179,7 @@ def load_source(
 
     return LoadResult(
         status="OK",
-        zip_name=zip_path.name,
+        zip_name=zip_name,
         dest_dir=str(dest_root),
         file_count=len(extracted),
         total_bytes=total_bytes,
