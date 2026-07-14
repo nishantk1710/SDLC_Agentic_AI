@@ -1,0 +1,10 @@
+# Dependencies for srs_parser.py
+# Requires Python 3.8+ (uses `from __future__ import annotations`).
+
+# Reading the SRS .docx (required)
+python-docx==1.2.0
+
+# Loading SHARED_DIR from a .env file (optional but recommended).
+# If this is absent the script still runs, reading SHARED_DIR from the real
+# environment instead of a .env file.
+python-dotenv==1.0.1

@@ -1,0 +1,189 @@
+{
+  "roles": [
+    {
+      "role": "Customer",
+      "description": "End users who browse restaurants and place orders. Highest-volume class; assume broad range of technical skill and primarily mobile usage. Most important class to satisfy."
+    },
+    {
+      "role": "Restaurant Manager",
+      "description": "Staff of partner restaurants who manage menus, toggle availability, and accept/fulfil orders. Moderate technical skill; frequent daily use during business hours."
+    },
+    {
+      "role": "Delivery Agent",
+      "description": "Contract couriers who accept delivery jobs and complete drop-offs. Mobile-only; need simple, low-friction workflows and offline-tolerant behaviour."
+    },
+    {
+      "role": "Platform Administrator",
+      "description": "Internal staff who onboard partners, resolve disputes, and configure platform parameters. Small population; high privilege; technically proficient."
+    }
+  ],
+  "entities": [
+    "User",
+    "Customer",
+    "Restaurant Manager",
+    "Delivery Agent",
+    "Restaurant",
+    "Menu Category",
+    "Menu Item",
+    "Cart",
+    "Order",
+    "Order Item",
+    "Payment",
+    "Delivery",
+    "Address",
+    "Review"
+  ],
+  "features": [
+    {
+      "id": "4.1",
+      "name": "User Registration and Authentication",
+      "priority": "High",
+      "description": "Allows users of all four classes to create accounts, authenticate, and manage their profiles and saved addresses",
+      "flows": [
+        "User submits registration details → system validates, creates account, and sends a verification message.",
+        "User submits credentials → system authenticates and issues a session token, or returns an error after repeated failures.",
+        "User requests password reset → system sends a time-limited reset link."
+      ],
+      "requirements": [
+        "REQ-1",
+        "REQ-2",
+        "REQ-3",
+        "REQ-4",
+        "REQ-5",
+        "REQ-6",
+        "REQ-7"
+      ],
+      "story": "As a user, I want to create accounts, authenticate, and manage my profiles and saved addresses."
+    },
+    {
+      "id": "4.2",
+      "name": "Restaurant and Menu Browsing",
+      "priority": "High",
+      "description": "Lets customers discover restaurants and menu items relevant to their location and preferences",
+      "flows": [
+        "Customer opens the app → system lists open restaurants that deliver to the customer's location.",
+        "Customer enters a search term or applies filters → system returns matching restaurants and items.",
+        "Customer selects a restaurant → system displays its menu, hours, rating, and delivery estimate."
+      ],
+      "requirements": [
+        "REQ-8",
+        "REQ-9",
+        "REQ-10",
+        "REQ-11",
+        "REQ-12"
+      ],
+      "story": "As a customer, I want to discover restaurants and menu items relevant to my location and preferences."
+    },
+    {
+      "id": "4.3",
+      "name": "Cart and Order Placement",
+      "priority": "High",
+      "description": "Lets customers assemble an order and submit it for fulfilment",
+      "flows": [
+        "Customer adds items to the cart → system updates the cart total and enforces per-restaurant rules.",
+        "Customer proceeds to checkout → system validates minimum order, delivery address, and item availability.",
+        "Customer confirms the order → system creates the order, initiates payment, and notifies the restaurant."
+      ],
+      "requirements": [
+        "REQ-13",
+        "REQ-14",
+        "REQ-15",
+        "REQ-16",
+        "REQ-17",
+        "REQ-18",
+        "REQ-19"
+      ],
+      "story": "As a customer, I want to assemble an order and submit it for fulfilment."
+    },
+    {
+      "id": "4.4",
+      "name": "Payment Processing",
+      "priority": "High",
+      "description": "Handles secure collection of payment and issuance of refunds",
+      "flows": [
+        "Customer selects a payment method and confirms → system requests authorization from the gateway.",
+        "Gateway returns success → system marks the order paid and proceeds; on failure the system keeps the order unpaid and prompts the customer to retry.",
+        "An eligible cancellation or dispute is resolved in the customer's favour → system issues a refund through the gateway."
+      ],
+      "requirements": [
+        "REQ-20",
+        "REQ-21",
+        "REQ-22",
+        "REQ-23",
+        "REQ-24"
+      ],
+      "story": "As a customer, I want payment processing."
+    },
+    {
+      "id": "4.5",
+      "name": "Order Tracking and Delivery Management",
+      "priority": "High",
+      "description": "Coordinates assignment of a delivery agent and provides real-time tracking to the customer",
+      "flows": [
+        "Restaurant marks an order ready → system assigns an available nearby delivery agent.",
+        "Delivery agent accepts the job → system shares pickup and drop-off details and begins tracking.",
+        "Delivery agent updates status / location → system relays live progress and ETA to the customer."
+      ],
+      "requirements": [
+        "REQ-25",
+        "REQ-26",
+        "REQ-27",
+        "REQ-28",
+        "REQ-29",
+        "REQ-30"
+      ],
+      "story": "As a delivery agent, I want order tracking and delivery management."
+    },
+    {
+      "id": "4.6",
+      "name": "Ratings and Reviews",
+      "priority": "Medium",
+      "description": "Lets customers provide feedback on completed orders",
+      "flows": [
+        "Order is delivered → system invites the customer to rate and review.",
+        "Customer submits a rating and optional text → system records it and updates the restaurant's average rating."
+      ],
+      "requirements": [
+        "REQ-31",
+        "REQ-32",
+        "REQ-33"
+      ],
+      "story": "As a customer, I want to provide feedback on completed orders."
+    },
+    {
+      "id": "4.7",
+      "name": "Restaurant Partner Menu Management",
+      "priority": "High",
+      "description": "Lets restaurant managers maintain their menu, pricing, and availability, and manage incoming orders",
+      "flows": [
+        "Manager edits the menu → system validates and publishes changes to customers.",
+        "New order arrives → system alerts the manager, who accepts or rejects it and later marks it ready."
+      ],
+      "requirements": [
+        "REQ-34",
+        "REQ-35",
+        "REQ-36",
+        "REQ-37",
+        "REQ-38"
+      ],
+      "story": "As a restaurant manager, I want to maintain my menu, pricing, and availability, and manage incoming orders."
+    },
+    {
+      "id": "4.8",
+      "name": "Administration and Platform Management",
+      "priority": "Medium",
+      "description": "Gives administrators control over partners, users, disputes, and platform configuration",
+      "flows": [
+        "Administrator onboards a restaurant → system creates the partner account and portal access.",
+        "Administrator reviews a dispute → system applies the resolution, including any refund."
+      ],
+      "requirements": [
+        "REQ-39",
+        "REQ-40",
+        "REQ-41",
+        "REQ-42"
+      ],
+      "story": "As a platform administrator, I want control over partners, users, disputes, and platform configuration."
+    }
+  ]
+}

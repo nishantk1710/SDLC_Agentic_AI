@@ -1,0 +1,36 @@
+{
+  "terms": [
+    {
+      "term": "Cart",
+      "definition": "A transient collection of menu items a customer intends to order from one restaurant."
+    },
+    {
+      "term": "COD",
+      "definition": "Cash on Delivery — payment collected in person at the time of delivery."
+    },
+    {
+      "term": "Delivery Agent",
+      "definition": "A courier who transports orders from restaurants to customers."
+    },
+    {
+      "term": "ETA",
+      "definition": "Estimated Time of Arrival for a delivery."
+    },
+    {
+      "term": "PCI DSS",
+      "definition": "Payment Card Industry Data Security Standard governing the handling of card data."
+    },
+    {
+      "term": "RBAC",
+      "definition": "Role-Based Access Control."
+    },
+    {
+      "term": "SRS",
+      "definition": "Software Requirements Specification (this document)."
+    },
+    {
+      "term": "Tokenization",
+      "definition": "Replacement of card data with a non-sensitive reference token held by the payment gateway."
+    }
+  ]
+}
