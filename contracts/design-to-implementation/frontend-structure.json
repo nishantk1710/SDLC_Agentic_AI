@@ -1,0 +1,393 @@
+{
+  "src/": {
+    "main.jsx": "React app entry point; mounts root and providers",
+    "App.jsx": "Root router; lazy-loads portal bundles by role prefix",
+    "assets/": {
+      "fonts/": "Poppins and Inter font files",
+      "images/": "Static brand images and placeholders",
+      "icons/": "SVG icon assets"
+    },
+    "styles/": {
+      "tokens.css": "CSS custom properties for all design tokens (colour, typography, spacing, radius, elevation)",
+      "global.css": "Reset, base html/body styles, font-face declarations",
+      "utilities.css": "Atomic utility classes derived from spacing and colour tokens"
+    },
+    "config/": {
+      "env.js": "Reads and exports VITE_ environment variables",
+      "routes.js": "Centralised route path constants matching routes.json",
+      "roles.js": "Role name constants and RBAC helper maps"
+    },
+    "types/": {
+      "user.types.js": "JSDoc/PropTypes definitions for User, Customer, Address",
+      "restaurant.types.js": "Restaurant, MenuCategory, MenuItem type definitions",
+      "order.types.js": "Order, OrderItem, Cart type definitions",
+      "payment.types.js": "Payment, Transaction type definitions",
+      "delivery.types.js": "Delivery, DeliveryAgent type definitions",
+      "review.types.js": "Review type definition",
+      "common.types.js": "Shared enums: OrderStatus, PaymentStatus, UserRole"
+    },
+    "utils/": {
+      "formatCurrency.js": "Formats numeric values to locale currency strings",
+      "formatDate.js": "Date and relative-time formatting helpers",
+      "validators.js": "Email, mobile, password strength validators",
+      "geoHelpers.js": "Coordinate distance and bounding-box utilities",
+      "orderStatus.js": "Order status transition helpers and label maps",
+      "errorMessages.js": "Human-readable error code to message mapping"
+    },
+    "hooks/": {
+      "useAuth.js": "Reads auth context; returns user, token, role helpers",
+      "useCart.js": "Cart state accessor and mutation helpers",
+      "useGeolocation.js": "Wraps browser Geolocation API with permission state",
+      "useSocket.js": "Initialises and returns Socket.IO connection for real-time events",
+      "useDebounce.js": "Generic debounce hook used in search inputs",
+      "usePagination.js": "Cursor/page state management for list views",
+      "useMediaQuery.js": "Responsive breakpoint detection hook",
+      "useNotifications.js": "Subscribes to notification events and manages badge count"
+    },
+    "context/": {
+      "AuthContext.jsx": "JWT token, decoded user, login/logout; provides auth state app-wide",
+      "CartContext.jsx": "Active cart document, item mutations, totals recalculation",
+      "NotificationContext.jsx": "In-app notification queue and read state",
+      "SocketContext.jsx": "Singleton Socket.IO instance shared across components"
+    },
+    "services/": {
+      "api.js": "Axios instance with base URL, JWT interceptor, and error normaliser",
+      "authService.js": "register, login, logout, verifyEmail, forgotPassword, resetPassword",
+      "userService.js": "getProfile, updateProfile, listAddresses, createAddress, updateAddress, deleteAddress",
+      "restaurantService.js": "listRestaurants, searchRestaurants, getRestaurant, filterRestaurants",
+      "menuService.js": "listCategories, getItem, createCategory, updateCategory, deleteCategory, createItem, updateItem, deleteItem, toggleItemAvailability",
+      "cartService.js": "getCart, addItem, updateItemQuantity, removeItem, clearCart",
+      "orderService.js": "placeOrder, getOrder, listOrders, cancelOrder, updateOrderStatus",
+      "paymentService.js": "initiatePayment, confirmPayment, requestRefund",
+      "deliveryService.js": "getDelivery, updateLocation, acceptJob, declineJob, markDelivered, uploadProof, listDeliveryHistory",
+      "reviewService.js": "submitReview, listReviews",
+      "adminService.js": "onboardRestaurant, suspendRestaurant, reactivateRestaurant, onboardAgent, suspendAgent, listUsers, getUser, listOrders, listTransactions, listDisputes, resolveDispute, moderateReview, getPlatformConfig, updatePlatformConfig",
+      "notificationService.js": "listNotifications, markRead"
+    },
+    "components/": {
+      "ui/": {
+        "Button/": {
+          "Button.jsx": "Primary, secondary, ghost, destructive variants; enforces 44px min tap target",
+          "Button.module.css": "Button token-based styles"
+        },
+        "Input/": {
+          "Input.jsx": "Text, email, tel, password input with inline error display",
+          "Input.module.css": "Input token-based styles"
+        },
+        "Select/": {
+          "Select.jsx": "Accessible dropdown select component",
+          "Select.module.css": "Select styles"
+        },
+        "Modal/": {
+          "Modal.jsx": "Accessible dialog with backdrop; radius-lg, elevation-2",
+          "Modal.module.css": "Modal styles"
+        },
+        "Card/": {
+          "Card.jsx": "Surface card with elevation-1, radius-md, optional hero image slot",
+          "Card.module.css": "Card token-based styles"
+        },
+        "Badge/": {
+          "Badge.jsx": "Pill badge for status labels; uses color-secondary or status colours",
+          "Badge.module.css": "Badge styles"
+        },
+        "Spinner/": {
+          "Spinner.jsx": "Loading spinner using color-primary",
+          "Spinner.module.css": "Spinner animation styles"
+        },
+        "Toast/": {
+          "Toast.jsx": "Transient success/error/warning notification toast",
+          "Toast.module.css": "Toast positioning and colour styles"
+        },
+        "Avatar/": {
+          "Avatar.jsx": "User or restaurant avatar with radius-pill fallback initials",
+          "Avatar.module.css": "Avatar styles"
+        },
+        "StarRating/": {
+          "StarRating.jsx": "1–5 interactive or display-only star rating",
+          "StarRating.module.css": "Star colour and sizing styles"
+        },
+        "Tabs/": {
+          "Tabs.jsx": "Accessible tab bar component",
+          "Tabs.module.css": "Tab styles"
+        },
+        "Chip/": {
+          "Chip.jsx": "Filter or tag chip; radius-sm",
+          "Chip.module.css": "Chip styles"
+        },
+        "EmptyState/": {
+          "EmptyState.jsx": "Illustration and message for empty list views",
+          "EmptyState.module.css": "Empty state layout styles"
+        },
+        "ErrorMessage/": {
+          "ErrorMessage.jsx": "Inline field or page-level error using color-error",
+          "ErrorMessage.module.css": "Error message styles"
+        }
+      },
+      "layout/": {
+        "AppShell/": {
+          "AppShell.jsx": "Wraps page with TopNav, optional BottomNav, and canvas background",
+          "AppShell.module.css": "Shell layout styles"
+        },
+        "TopNav/": {
+          "TopNav.jsx": "Consistent top navigation bar with logo, account link, and help",
+          "TopNav.module.css": "TopNav styles"
+        },
+        "BottomNav/": {
+          "BottomNav.jsx": "Mobile bottom navigation for customer app (Home, Search, Orders, Account)",
+          "BottomNav.module.css": "BottomNav styles"
+        },
+        "Sidebar/": {
+          "Sidebar.jsx": "Desktop left-side navigation for restaurant portal and admin console",
+          "Sidebar.module.css": "Sidebar styles"
+        },
+        "PageHeader/": {
+          "PageHeader.jsx": "Page title, breadcrumb, and optional action slot",
+          "PageHeader.module.css": "PageHeader styles"
+        },
+        "ProtectedRoute/": {
+          "ProtectedRoute.jsx": "Checks auth token and role; redirects to login or 403 if unauthorised"
+        },
+        "PublicOnlyRoute/": {
+          "PublicOnlyRoute.jsx": "Redirects authenticated users away from login/register pages"
+        }
+      },
+      "shared/": {
+        "AddressCard/": {
+          "AddressCard.jsx": "Displays a saved address with edit/delete actions"
+        },
+        "OrderStatusBadge/": {
+          "OrderStatusBadge.jsx": "Maps OrderStatus enum to colour badge"
+        },
+        "OrderStatusTimeline/": {
+          "OrderStatusTimeline.jsx": "Vertical step-by-step order status progress indicator"
+        },
+        "RestaurantCard/": {
+          "RestaurantCard.jsx": "Summary card: photo, name, rating, delivery fee, ETA"
+        },
+        "MenuItemCard/": {
+          "MenuItemCard.jsx": "Menu item with photo, name, price, allergen flag, add-to-cart button"
+        },
+        "CartSummary/": {
+          "CartSummary.jsx": "Subtotal, tax, delivery fee, total; minimum-order shortfall warning"
+        },
+        "PaymentMethodSelector/": {
+          "PaymentMethodSelector.jsx": "Card, digital wallet, cash-on-delivery option list"
+        },
+        "MapView/": {
+          "MapView.jsx": "Embeds mapping provider iframe or SDK component for delivery tracking"
+        },
+        "ReviewForm/": {
+          "ReviewForm.jsx": "1–5 star picker and optional textarea for order review submission"
+        },
+        "SearchBar/": {
+          "SearchBar.jsx": "Debounced search input with clear button"
+        },
+        "FilterPanel/": {
+          "FilterPanel.jsx": "Cuisine, price range, min rating, delivery time filter controls and sort"
+        },
+        "Pagination/": {
+          "Pagination.jsx": "Prev/next and page number controls for admin list views"
+        },
+        "ConfirmDialog/": {
+          "ConfirmDialog.jsx": "Reusable confirmation modal for destructive actions"
+        }
+      }
+    },
+    "portals/": {
+      "customer/": {
+        "pages/": {
+          "Home/": {
+            "HomePage.jsx": "Landing screen; hero address input and open restaurant list"
+          },
+          "Auth/": {
+            "RegisterPage.jsx": "Email/mobile + password registration form",
+            "VerifyPage.jsx": "OTP or link verification entry screen",
+            "LoginPage.jsx": "Credential login with locked-account feedback",
+            "ForgotPasswordPage.jsx": "Email/mobile input to request reset link",
+            "ResetPasswordPage.jsx": "New password form validated against reset token"
+          },
+          "Account/": {
+            "ProfilePage.jsx": "View and edit customer profile details",
+            "AddressesPage.jsx": "List of saved delivery addresses",
+            "AddAddressPage.jsx": "Form to create a new address",
+            "EditAddressPage.jsx": "Form to edit an existing address"
+          },
+          "Restaurants/": {
+            "RestaurantListingPage.jsx": "Filterable, searchable restaurant grid with REQ-8–12 support",
+            "RestaurantDetailPage.jsx": "Menu categories, items, rating, hours, delivery info",
+            "MenuItemDetailPage.jsx": "Full item detail: description, allergens, dietary info, add to cart"
+          },
+          "Cart/": {
+            "CartPage.jsx": "Cart item list, quantity controls, CartSummary, checkout CTA"
+          },
+          "Checkout/": {
+            "CheckoutPage.jsx": "Address selector, delivery vs pickup toggle, order summary",
+            "PaymentPage.jsx": "Payment method selector and gateway token capture UI"
+          },
+          "Orders/": {
+            "OrderConfirmationPage.jsx": "Order placed success screen with summary",
+            "OrderHistoryPage.jsx": "Paginated list of past orders",
+            "OrderDetailPage.jsx": "Full order detail with live status and cancel option",
+            "LiveTrackingPage.jsx": "Map view of agent location with ETA (REQ-28)",
+            "SubmitReviewPage.jsx": "Post-delivery review form (REQ-31)"
+          },
+          "Notifications/": {
+            "NotificationsPage.jsx": "Chronological notification list with read state"
+          },
+          "Help/": {
+            "HelpPage.jsx": "Support links, FAQ, and dispute submission entry"
+          }
+        },
+        "components/": {
+          "AddressSelector/": {
+            "AddressSelector.jsx": "Inline dropdown to pick saved address or add new at checkout"
+          },
+          "DeliveryToggle/": {
+            "DeliveryToggle.jsx": "Delivery vs pickup selection control"
+          },
+          "CartItemRow/": {
+            "CartItemRow.jsx": "Single cart item with quantity stepper and remove button"
+          },
+          "RestaurantHero/": {
+            "RestaurantHero.jsx": "Full-width food photo banner with restaurant metadata overlay"
+          },
+          "MenuCategorySection/": {
+            "MenuCategorySection.jsx": "Sticky category header and its list of MenuItemCards"
+          },
+          "MinOrderWarning/": {
+            "MinOrderWarning.jsx": "Inline warning showing shortfall to minimum order value"
+          }
+        }
+      },
+      "restaurant/": {
+        "pages/": {
+          "Auth/": {
+            "RestaurantLoginPage.jsx": "Manager login screen"
+          },
+          "Dashboard/": {
+            "DashboardPage.jsx": "KPI summary: open status toggle, pending order count, today's revenue"
+          },
+          "Orders/": {
+            "IncomingOrdersPage.jsx": "Real-time incoming order queue with accept/reject actions",
+            "OrderDetailPage.jsx": "Order detail with status advance controls (Preparing → Ready)",
+            "OrderHistoryPage.jsx": "Past orders with filter and search"
+          },
+          "Menu/": {
+            "MenuManagementPage.jsx": "Category and item tree with toggle availability controls",
+            "AddCategoryPage.jsx": "Form to create a menu category",
+            "EditCategoryPage.jsx": "Form to edit a menu category",
+            "AddMenuItemPage.jsx": "Form to create a menu item with allergen/dietary fields",
+            "EditMenuItemPage.jsx": "Form to edit a menu item"
+          },
+          "Settings/": {
+            "RestaurantSettingsPage.jsx": "Operating hours, delivery radius, open/closed toggle, restaurant profile"
+          }
+        },
+        "components/": {
+          "IncomingOrderAlert/": {
+            "IncomingOrderAlert.jsx": "Real-time audio + visual alert banner for new orders"
+          },
+          "OrderActionPanel/": {
+            "OrderActionPanel.jsx": "Accept/reject and status advance buttons with reason input for rejection"
+          },
+          "MenuItemForm/": {
+            "MenuItemForm.jsx": "Reusable item form: name, description, price, availability, allergens"
+          },
+          "AvailabilityToggle/": {
+            "AvailabilityToggle.jsx": "Single-tap toggle for item or restaurant open/closed status"
+          }
+        }
+      },
+      "agent/": {
+        "pages/": {
+          "Auth/": {
+            "AgentLoginPage.jsx": "Delivery agent login screen"
+          },
+          "Dashboard/": {
+            "AgentDashboardPage.jsx": "Available job cards with single-tap accept; REQ-26 timer countdown"
+          },
+          "Deliveries/": {
+            "ActiveDeliveryPage.jsx": "Pickup and drop-off details, status update button, map; single-tap design per NFR-6",
+            "ProofOfDeliveryPage.jsx": "Camera capture or upload for proof-of-delivery photo",
+            "DeliveryHistoryPage.jsx": "List of past completed deliveries"
+          },
+          "Profile/": {
+            "AgentProfilePage.jsx": "Agent profile view and edit"
+          }
+        },
+        "components/": {
+          "JobCard/": {
+            "JobCard.jsx": "Offered job summary with accept/decline and countdown timer"
+          },
+          "DeliveryStatusButton/": {
+            "DeliveryStatusButton.jsx": "Large single-tap button to advance delivery status; minimal interaction per NFR-6"
+          },
+          "ProofCapture/": {
+            "ProofCapture.jsx": "Camera shutter / file-picker for proof-of-delivery using MediaDevices API"
+          }
+        }
+      },
+      "admin/": {
+        "pages/": {
+          "Auth/": {
+            "AdminLoginPage.jsx": "Administrator login screen"
+          },
+          "Dashboard/": {
+            "AdminDashboardPage.jsx": "Platform KPIs: orders, revenue, active users, open disputes"
+          },
+          "Users/": {
+            "UserManagementPage.jsx": "Searchable user list with role filter",
+            "UserDetailPage.jsx": "User profile, order history, account actions (suspend/reactivate)"
+          },
+          "Restaurants/": {
+            "RestaurantManagementPage.jsx": "Partner list with status filter",
+            "RestaurantDetailPage.jsx": "Partner profile, menu overview, suspend/reactivate actions",
+            "OnboardRestaurantPage.jsx": "Form to create and onboard a new restaurant partner"
+          },
+          "Agents/": {
+            "AgentManagementPage.jsx": "Delivery agent list with status filter",
+            "AgentDetailPage.jsx": "Agent profile, delivery history, suspend/reactivate actions",
+            "OnboardAgentPage.jsx": "Form to onboard a new delivery agent"
+          },
+          "Orders/": {
+            "OrderManagementPage.jsx": "Platform-wide order search and list",
+            "OrderDetailPage.jsx": "Full order detail with payment and delivery sub-records"
+          },
+          "Transactions/": {
+            "TransactionManagementPage.jsx": "Transaction list with search and status filter",
+            "TransactionDetailPage.jsx": "Payment record detail with gateway reference"
+          },
+          "Disputes/": {
+            "DisputeManagementPage.jsx": "Open and resolved dispute queue",
+            "DisputeDetailPage.jsx": "Dispute thread with resolution form and refund trigger"
+          },
+          "Reviews/": {
+            "ReviewModerationPage.jsx": "Published reviews with remove action per REQ-33"
+          },
+          "Settings/": {
+            "PlatformConfigPage.jsx": "Commission rate, service fee, delivery radius, and other platform parameters"
+          }
+        },
+        "components/": {
+          "StatsCard/": {
+            "StatsCard.jsx": "KPI metric tile used in admin dashboard"
+          },
+          "DataTable/": {
+            "DataTable.jsx": "Sortable, searchable table with Pagination for admin list views"
+          },
+          "AdminActionMenu/": {
+            "AdminActionMenu.jsx": "Dropdown of privileged actions (suspend, reactivate, refund) with confirmation"
+          },
+          "AuditLog/": {
+            "AuditLog.jsx": "Displays actor, timestamp, and affected entity for admin actions"
+          }
+        }
+      }
+    },
+    "pages/": {
+      "NotFoundPage.jsx": "404 error page",
+      "ForbiddenPage.jsx": "403 forbidden page",
+      "ServerErrorPage.jsx": "500 server error page"
+    }
+  }
+}
