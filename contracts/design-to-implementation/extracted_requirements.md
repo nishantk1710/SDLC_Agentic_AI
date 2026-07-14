@@ -135,4 +135,30 @@
 - token: elevation-2 · value: 0 4px 12px rgba(0,0,0,0.10) · usage: Raised elements: menus, popovers, active cards
 
 ## Tech Stack
-Not fixed by the SRS (requirements-level document). Stack is decided in Design; see constraints + external_interfaces for imposed technical constraints (API-gateway/services, relational DB, TLS 1.2+, PCI-DSS tokenization).
+
+### 7 Technology Stack
+- QuickBite release 1.0 is implemented as a web application on the MERN stack — MongoDB, Express.js, React, and Node.js — with all four experiences (customer, restaurant partner portal, delivery-agent, and admin console) delivered through the browser rather than as native mobile applications.
+
+### 7.1 Client Applications
+- The four experiences are built as React single-page applications sharing a common component library and the design tokens defined in Section 3.1. Each is a responsive web app supporting current versions of Chrome, Safari, Firefox, and Edge, with the customer and delivery-agent apps optimized for mobile browser widths and the restaurant portal and admin console optimized for desktop.
+
+### 7.2 Backend Architecture
+- The backend runs on Node.js using the Express.js framework, organized as a set of independently deployable Express services sitting behind a single API gateway so that high-traffic components such as search and ordering can scale independently of the rest of the platform. Services expose RESTful HTTPS APIs, with real-time order and delivery updates delivered over WebSocket connections (e.g. Socket.IO).
+
+### 7.3 Data Storage
+- MongoDB serves as the platform's primary persistent store, holding users, restaurants, menus, carts, orders, payments, deliveries, and reviews as document collections. An object-data-modeling layer (e.g. Mongoose) defines schemas and validation and is shared across backend services as a common data-access layer.
+
+### 7.4 Third-Party Integrations
+- Payment Gateway — called from the Express backend over outbound HTTPS/REST for tokenized card and wallet authorization, capture, refunds, and settlement webhooks.
+- Mapping / Geocoding API — called from the Express backend over outbound HTTPS/REST for address resolution, distance/ETA estimation, and route polylines used in delivery tracking.
+- Messaging Provider — called from the Express backend over outbound HTTPS/REST for templated SMS, push, and email notifications, with delivery/failure receipts.
+
+### 7.5 Security Technologies
+- TLS 1.2 or higher for all network communication, with sensitive data encrypted at rest.
+- PCI DSS v4.0-compliant, tokenized payment handling; no raw card data is stored on QuickBite servers.
+- Salted password hashing (e.g. bcrypt) for all stored credentials, with JSON Web Tokens (JWT) used for session authentication.
+- Role-based access control (RBAC) enforced in Express middleware for all privileged operations, with administrative actions logged by actor, timestamp, and affected entity.
+- Rate limiting (e.g. express-rate-limit) on authentication and payment endpoints to protect against automated abuse.
+
+### 7.6 Device Capabilities
+- As browser-based applications, the customer and delivery-agent web apps use the browser's Geolocation API to obtain the user's location and the MediaDevices/getUserMedia camera API (delivery-agent app) to capture optional proof-of-delivery photographs. Both capabilities are subject to user permission granted through the browser.

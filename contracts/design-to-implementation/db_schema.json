@@ -1,0 +1,1351 @@
+{
+  "datastore": "document",
+  "odm": "mongoose",
+  "collections": [
+    {
+      "name": "users",
+      "model": "User",
+      "comment": "Single unified auth identity for all roles; role-specific profile data lives in its own collection referencing this document",
+      "fields": [
+        {
+          "name": "email",
+          "type": "String",
+          "required": false,
+          "unique": true,
+          "sparse": true
+        },
+        {
+          "name": "phone",
+          "type": "String",
+          "required": false,
+          "unique": true,
+          "sparse": true
+        },
+        {
+          "name": "passwordHash",
+          "type": "String",
+          "required": true
+        },
+        {
+          "name": "role",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "customer",
+            "restaurantManager",
+            "deliveryAgent",
+            "admin"
+          ]
+        },
+        {
+          "name": "isVerified",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "verificationToken",
+          "type": "String"
+        },
+        {
+          "name": "verificationTokenExpiry",
+          "type": "Date"
+        },
+        {
+          "name": "passwordResetToken",
+          "type": "String"
+        },
+        {
+          "name": "passwordResetExpiry",
+          "type": "Date"
+        },
+        {
+          "name": "failedLoginAttempts",
+          "type": "Number",
+          "required": true,
+          "default": 0
+        },
+        {
+          "name": "lockedUntil",
+          "type": "Date"
+        },
+        {
+          "name": "isActive",
+          "type": "Boolean",
+          "required": true,
+          "default": true
+        },
+        {
+          "name": "fullName",
+          "type": "String",
+          "required": true
+        },
+        {
+          "name": "avatarUrl",
+          "type": "String"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "email"
+          ],
+          "unique": true,
+          "sparse": true
+        },
+        {
+          "fields": [
+            "phone"
+          ],
+          "unique": true,
+          "sparse": true
+        },
+        {
+          "fields": [
+            "role"
+          ]
+        },
+        {
+          "fields": [
+            "passwordResetToken"
+          ],
+          "sparse": true
+        }
+      ]
+    },
+    {
+      "name": "customers",
+      "model": "Customer",
+      "comment": "Customer-specific profile extending User; holds saved delivery addresses",
+      "fields": [
+        {
+          "name": "userId",
+          "type": "ObjectId",
+          "ref": "User",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "savedAddresses",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "_id",
+              "type": "ObjectId"
+            },
+            {
+              "name": "label",
+              "type": "String"
+            },
+            {
+              "name": "line1",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "line2",
+              "type": "String"
+            },
+            {
+              "name": "city",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "postcode",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "coordinates",
+              "type": "Object",
+              "fields": [
+                {
+                  "name": "lat",
+                  "type": "Number",
+                  "required": true
+                },
+                {
+                  "name": "lng",
+                  "type": "Number",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "name": "isDefault",
+              "type": "Boolean",
+              "default": false
+            }
+          ]
+        },
+        {
+          "name": "preferredPaymentMethod",
+          "type": "String",
+          "enum": [
+            "card",
+            "wallet",
+            "cod"
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "name": "restaurantManagers",
+      "model": "RestaurantManager",
+      "comment": "Restaurant-manager-specific profile; links a user to one restaurant",
+      "fields": [
+        {
+          "name": "userId",
+          "type": "ObjectId",
+          "ref": "User",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "restaurantId",
+          "type": "ObjectId",
+          "ref": "Restaurant",
+          "required": true
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "restaurantId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "deliveryAgents",
+      "model": "DeliveryAgent",
+      "comment": "Delivery-agent-specific profile with live availability and location state",
+      "fields": [
+        {
+          "name": "userId",
+          "type": "ObjectId",
+          "ref": "User",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "offline",
+            "available",
+            "busy"
+          ],
+          "default": "offline"
+        },
+        {
+          "name": "isApproved",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "isSuspended",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "currentLocation",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "lat",
+              "type": "Number"
+            },
+            {
+              "name": "lng",
+              "type": "Number"
+            },
+            {
+              "name": "updatedAt",
+              "type": "Date"
+            }
+          ]
+        },
+        {
+          "name": "vehicleType",
+          "type": "String",
+          "enum": [
+            "bicycle",
+            "motorcycle",
+            "car"
+          ]
+        },
+        {
+          "name": "activeDeliveryId",
+          "type": "ObjectId",
+          "ref": "Delivery"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "userId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "currentLocation.lat",
+            "currentLocation.lng"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "restaurants",
+      "model": "Restaurant",
+      "comment": "Restaurant aggregate root; embeds full menu hierarchy (categories → items) for single-fetch browsing",
+      "fields": [
+        {
+          "name": "name",
+          "type": "String",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "cuisineTypes",
+          "type": "[String]",
+          "required": true
+        },
+        {
+          "name": "logoUrl",
+          "type": "String"
+        },
+        {
+          "name": "bannerUrl",
+          "type": "String"
+        },
+        {
+          "name": "address",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "line1",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "line2",
+              "type": "String"
+            },
+            {
+              "name": "city",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "postcode",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "coordinates",
+              "type": "Object",
+              "fields": [
+                {
+                  "name": "lat",
+                  "type": "Number",
+                  "required": true
+                },
+                {
+                  "name": "lng",
+                  "type": "Number",
+                  "required": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "phone",
+          "type": "String"
+        },
+        {
+          "name": "isOpen",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "isApproved",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "isSuspended",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "operatingHours",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "dayOfWeek",
+              "type": "Number",
+              "required": true
+            },
+            {
+              "name": "openTime",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "closeTime",
+              "type": "String",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "deliveryRadiusKm",
+          "type": "Number",
+          "required": true
+        },
+        {
+          "name": "deliveryFee",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "minimumOrderValue",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "estimatedDeliveryMinutes",
+          "type": "Number",
+          "required": true
+        },
+        {
+          "name": "allowsCOD",
+          "type": "Boolean",
+          "required": true,
+          "default": false
+        },
+        {
+          "name": "avgRating",
+          "type": "Number",
+          "default": 0
+        },
+        {
+          "name": "reviewCount",
+          "type": "Number",
+          "default": 0
+        },
+        {
+          "name": "commissionRate",
+          "type": "Number"
+        },
+        {
+          "name": "menuCategories",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "_id",
+              "type": "ObjectId"
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "description",
+              "type": "String"
+            },
+            {
+              "name": "sortOrder",
+              "type": "Number",
+              "default": 0
+            },
+            {
+              "name": "isActive",
+              "type": "Boolean",
+              "default": true
+            },
+            {
+              "name": "items",
+              "type": "[Object]",
+              "fields": [
+                {
+                  "name": "_id",
+                  "type": "ObjectId"
+                },
+                {
+                  "name": "name",
+                  "type": "String",
+                  "required": true
+                },
+                {
+                  "name": "description",
+                  "type": "String"
+                },
+                {
+                  "name": "price",
+                  "type": "Decimal128",
+                  "required": true
+                },
+                {
+                  "name": "imageUrl",
+                  "type": "String"
+                },
+                {
+                  "name": "isAvailable",
+                  "type": "Boolean",
+                  "required": true,
+                  "default": true
+                },
+                {
+                  "name": "sortOrder",
+                  "type": "Number",
+                  "default": 0
+                },
+                {
+                  "name": "tags",
+                  "type": "[String]"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "isApproved",
+            "isSuspended",
+            "isOpen"
+          ]
+        },
+        {
+          "fields": [
+            "cuisineTypes"
+          ]
+        },
+        {
+          "fields": [
+            "avgRating"
+          ]
+        },
+        {
+          "fields": [
+            "estimatedDeliveryMinutes"
+          ]
+        },
+        {
+          "fields": [
+            "address.coordinates.lat",
+            "address.coordinates.lng"
+          ]
+        },
+        {
+          "fields": [
+            "name"
+          ],
+          "text": true
+        }
+      ]
+    },
+    {
+      "name": "carts",
+      "model": "Cart",
+      "comment": "One active cart per customer per restaurant; cleared on order placement or explicit abandon",
+      "fields": [
+        {
+          "name": "customerId",
+          "type": "ObjectId",
+          "ref": "Customer",
+          "required": true
+        },
+        {
+          "name": "restaurantId",
+          "type": "ObjectId",
+          "ref": "Restaurant",
+          "required": true
+        },
+        {
+          "name": "items",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "menuItemId",
+              "type": "ObjectId",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "price",
+              "type": "Decimal128",
+              "required": true
+            },
+            {
+              "name": "quantity",
+              "type": "Number",
+              "required": true
+            },
+            {
+              "name": "imageUrl",
+              "type": "String"
+            }
+          ]
+        },
+        {
+          "name": "subtotal",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "deliveryFeeSnapshot",
+          "type": "Decimal128"
+        },
+        {
+          "name": "taxAmount",
+          "type": "Decimal128"
+        },
+        {
+          "name": "total",
+          "type": "Decimal128"
+        },
+        {
+          "name": "fulfillmentType",
+          "type": "String",
+          "enum": [
+            "delivery",
+            "pickup"
+          ],
+          "default": "delivery"
+        },
+        {
+          "name": "deliveryAddressId",
+          "type": "ObjectId"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "customerId",
+            "restaurantId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "customerId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "orders",
+      "model": "Order",
+      "comment": "Placed-order aggregate root; snapshots item names and prices for financial integrity; references Restaurant, Customer, and Agent",
+      "fields": [
+        {
+          "name": "customerId",
+          "type": "ObjectId",
+          "ref": "Customer",
+          "required": true
+        },
+        {
+          "name": "restaurantId",
+          "type": "ObjectId",
+          "ref": "Restaurant",
+          "required": true
+        },
+        {
+          "name": "restaurantName",
+          "type": "String",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "pendingRestaurantAcceptance",
+            "accepted",
+            "preparing",
+            "ready",
+            "outForDelivery",
+            "delivered",
+            "cancelledByCustomer",
+            "cancelledByRestaurant",
+            "cancelledByAdmin"
+          ],
+          "default": "pendingRestaurantAcceptance"
+        },
+        {
+          "name": "fulfillmentType",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "delivery",
+            "pickup"
+          ]
+        },
+        {
+          "name": "deliveryAddress",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "line1",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "line2",
+              "type": "String"
+            },
+            {
+              "name": "city",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "postcode",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "coordinates",
+              "type": "Object",
+              "fields": [
+                {
+                  "name": "lat",
+                  "type": "Number"
+                },
+                {
+                  "name": "lng",
+                  "type": "Number"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "items",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "menuItemId",
+              "type": "ObjectId",
+              "required": true
+            },
+            {
+              "name": "name",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "unitPrice",
+              "type": "Decimal128",
+              "required": true
+            },
+            {
+              "name": "quantity",
+              "type": "Number",
+              "required": true
+            },
+            {
+              "name": "lineTotal",
+              "type": "Decimal128",
+              "required": true
+            }
+          ]
+        },
+        {
+          "name": "subtotal",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "deliveryFee",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "taxAmount",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "total",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "commissionAmount",
+          "type": "Decimal128"
+        },
+        {
+          "name": "rejectionReason",
+          "type": "String"
+        },
+        {
+          "name": "cancellationReason",
+          "type": "String"
+        },
+        {
+          "name": "deliveryAgentId",
+          "type": "ObjectId",
+          "ref": "DeliveryAgent"
+        },
+        {
+          "name": "statusHistory",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "status",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "changedAt",
+              "type": "Date",
+              "required": true
+            },
+            {
+              "name": "changedBy",
+              "type": "ObjectId",
+              "ref": "User"
+            }
+          ]
+        },
+        {
+          "name": "estimatedDeliveryMinutes",
+          "type": "Number"
+        },
+        {
+          "name": "placedAt",
+          "type": "Date",
+          "required": true
+        },
+        {
+          "name": "acceptedAt",
+          "type": "Date"
+        },
+        {
+          "name": "deliveredAt",
+          "type": "Date"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "customerId",
+            "placedAt"
+          ]
+        },
+        {
+          "fields": [
+            "restaurantId",
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "restaurantId",
+            "placedAt"
+          ]
+        },
+        {
+          "fields": [
+            "deliveryAgentId",
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "placedAt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "payments",
+      "model": "Payment",
+      "comment": "One payment record per order; stores gateway reference and tokenized method details only — no raw card data",
+      "fields": [
+        {
+          "name": "orderId",
+          "type": "ObjectId",
+          "ref": "Order",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "customerId",
+          "type": "ObjectId",
+          "ref": "Customer",
+          "required": true
+        },
+        {
+          "name": "method",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "card",
+            "wallet",
+            "cod"
+          ]
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "pending",
+            "authorized",
+            "captured",
+            "failed",
+            "refunded",
+            "partiallyRefunded",
+            "voided"
+          ],
+          "default": "pending"
+        },
+        {
+          "name": "amount",
+          "type": "Decimal128",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "type": "String",
+          "required": true,
+          "default": "GBP"
+        },
+        {
+          "name": "gatewayTransactionId",
+          "type": "String"
+        },
+        {
+          "name": "gatewayPaymentToken",
+          "type": "String"
+        },
+        {
+          "name": "gatewayResponse",
+          "type": "Mixed"
+        },
+        {
+          "name": "refunds",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "Decimal128",
+              "required": true
+            },
+            {
+              "name": "reason",
+              "type": "String"
+            },
+            {
+              "name": "gatewayRefundId",
+              "type": "String"
+            },
+            {
+              "name": "initiatedBy",
+              "type": "ObjectId",
+              "ref": "User"
+            },
+            {
+              "name": "processedAt",
+              "type": "Date"
+            }
+          ]
+        },
+        {
+          "name": "paidAt",
+          "type": "Date"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "orderId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "customerId"
+          ]
+        },
+        {
+          "fields": [
+            "gatewayTransactionId"
+          ],
+          "sparse": true
+        },
+        {
+          "fields": [
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "deliveries",
+      "model": "Delivery",
+      "comment": "Delivery lifecycle for one order; tracks agent assignment, live location snapshots, status, and proof-of-delivery",
+      "fields": [
+        {
+          "name": "orderId",
+          "type": "ObjectId",
+          "ref": "Order",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "restaurantId",
+          "type": "ObjectId",
+          "ref": "Restaurant",
+          "required": true
+        },
+        {
+          "name": "customerId",
+          "type": "ObjectId",
+          "ref": "Customer",
+          "required": true
+        },
+        {
+          "name": "deliveryAgentId",
+          "type": "ObjectId",
+          "ref": "DeliveryAgent"
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "required": true,
+          "enum": [
+            "unassigned",
+            "offered",
+            "assigned",
+            "pickedUp",
+            "delivered",
+            "failed",
+            "cancelled"
+          ],
+          "default": "unassigned"
+        },
+        {
+          "name": "offerExpiresAt",
+          "type": "Date"
+        },
+        {
+          "name": "assignmentAttempts",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "agentId",
+              "type": "ObjectId",
+              "ref": "DeliveryAgent"
+            },
+            {
+              "name": "offeredAt",
+              "type": "Date"
+            },
+            {
+              "name": "outcome",
+              "type": "String",
+              "enum": [
+                "accepted",
+                "declined",
+                "timeout"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "pickupAddress",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "line1",
+              "type": "String"
+            },
+            {
+              "name": "city",
+              "type": "String"
+            },
+            {
+              "name": "coordinates",
+              "type": "Object",
+              "fields": [
+                {
+                  "name": "lat",
+                  "type": "Number"
+                },
+                {
+                  "name": "lng",
+                  "type": "Number"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "dropoffAddress",
+          "type": "Object",
+          "fields": [
+            {
+              "name": "line1",
+              "type": "String"
+            },
+            {
+              "name": "city",
+              "type": "String"
+            },
+            {
+              "name": "coordinates",
+              "type": "Object",
+              "fields": [
+                {
+                  "name": "lat",
+                  "type": "Number"
+                },
+                {
+                  "name": "lng",
+                  "type": "Number"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "estimatedPickupAt",
+          "type": "Date"
+        },
+        {
+          "name": "estimatedDropoffAt",
+          "type": "Date"
+        },
+        {
+          "name": "actualPickedUpAt",
+          "type": "Date"
+        },
+        {
+          "name": "actualDeliveredAt",
+          "type": "Date"
+        },
+        {
+          "name": "proofOfDeliveryUrl",
+          "type": "String"
+        },
+        {
+          "name": "agentLocationHistory",
+          "type": "[Object]",
+          "fields": [
+            {
+              "name": "lat",
+              "type": "Number"
+            },
+            {
+              "name": "lng",
+              "type": "Number"
+            },
+            {
+              "name": "recordedAt",
+              "type": "Date"
+            }
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "orderId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "deliveryAgentId",
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "status"
+          ]
+        },
+        {
+          "fields": [
+            "restaurantId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "reviews",
+      "model": "Review",
+      "comment": "One customer review per delivered order; used to recompute restaurant avgRating",
+      "fields": [
+        {
+          "name": "orderId",
+          "type": "ObjectId",
+          "ref": "Order",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "customerId",
+          "type": "ObjectId",
+          "ref": "Customer",
+          "required": true
+        },
+        {
+          "name": "restaurantId",
+          "type": "ObjectId",
+          "ref": "Restaurant",
+          "required": true
+        },
+        {
+          "name": "rating",
+          "type": "Number",
+          "required": true
+        },
+        {
+          "name": "comment",
+          "type": "String"
+        },
+        {
+          "name": "isVisible",
+          "type": "Boolean",
+          "required": true,
+          "default": true
+        },
+        {
+          "name": "removedBy",
+          "type": "ObjectId",
+          "ref": "User"
+        },
+        {
+          "name": "removedAt",
+          "type": "Date"
+        },
+        {
+          "name": "removalReason",
+          "type": "String"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "orderId"
+          ],
+          "unique": true
+        },
+        {
+          "fields": [
+            "restaurantId",
+            "isVisible"
+          ]
+        },
+        {
+          "fields": [
+            "customerId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "platformConfigs",
+      "model": "PlatformConfig",
+      "comment": "Singleton-style admin-controlled configuration document for platform-wide parameters",
+      "fields": [
+        {
+          "name": "key",
+          "type": "String",
+          "required": true,
+          "unique": true
+        },
+        {
+          "name": "value",
+          "type": "Mixed",
+          "required": true
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "updatedBy",
+          "type": "ObjectId",
+          "ref": "User"
+        }
+      ],
+      "indexes": [
+        {
+          "fields": [
+            "key"
+          ],
+          "unique": true
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "EMBED menuCategories + items inside Restaurant: The menu is tightly owned by the restaurant, always read together for browsing (REQ-8 to REQ-12), and mutated exclusively by its manager (REQ-34, REQ-35). A single restaurant menu in a single-city v1 launch is bounded (realistic cap of ~20 categories × ~30 items = 600 items), well under MongoDB's 16 MB document limit. This makes the restaurant-browse query a single document fetch with no $lookup.",
+    "SNAPSHOT items inside Order: Order items embed a copy of name, unitPrice, and lineTotal at placement time (REQ-23). This is intentional — menu prices can change after an order is placed, and financial audit, dispute resolution (REQ-41), and commission calculation (BR-5) all require the price at time of order, not the current menu price.",
+    "REFERENCE Restaurant from Order / Cart / Delivery: Restaurant is an independent aggregate queried across many contexts (browse, order history, admin search). Orders and carts hold the restaurantId reference plus a denormalised restaurantName snapshot for display without a join.",
+    "REFERENCE DeliveryAgent from Order and Delivery: Delivery agents are independently managed (REQ-39), have their own lifecycle (approval, suspension), and their profile is updated continuously (live location). Embedding would make the restaurant or order document a moving target.",
+    "SEPARATE Delivery collection: Delivery has its own status machine, assignment-attempt history, and a growing agentLocationHistory array (REQ-26, REQ-28, REQ-29). Embedding it in Order would make the Order document unbounded in size and would require frequent partial updates to a deeply nested path.",
+    "SEPARATE Payment collection: Payment maps 1-to-1 with an Order but contains gateway-specific fields, refund sub-records, and PCI-sensitive tokens. Keeping it separate limits exposure surface and makes it straightforward to scope access in middleware without touching Order documents.",
+    "SEPARATE Cart collection: Cart is transient and updated on every item add/remove/quantity change. Embedding it in Customer would create a high-churn hotspot on the Customer document. A dedicated carts collection with a compound unique index (customerId + restaurantId) enforces the one-cart-per-customer-per-restaurant rule (REQ-13, REQ-14) at the database level.",
+    "SEPARATE Review collection: Reviews are written once but read independently (admin moderation REQ-33, rating aggregation REQ-32). The unique index on orderId enforces BR-6 (one review per order) at the database level. avgRating and reviewCount on Restaurant are denormalised counters updated by a post-save hook or change-stream worker after each review insert or isVisible toggle.",
+    "Customer savedAddresses are EMBEDDED in the customers document: Addresses are tightly owned, always read with the customer profile, and have a natural small upper bound (REQ-6 implies a handful of saved addresses). The deliveryAddress on Order is a further snapshot copy taken at placement to preserve the historical delivery location.",
+    "statusHistory is EMBEDDED in Order: It is append-only, bounded by the finite order status machine (~7 transitions max), and always read with the order for tracking and audit purposes.",
+    "assignmentAttempts is EMBEDDED in Delivery: Bounded by the small number of retries before an order is escalated; read together with delivery status for ops dashboards.",
+    "Decimal128 is used for all monetary fields (price, subtotal, deliveryFee, taxAmount, total, commissionAmount, refund amounts) to avoid floating-point rounding errors in financial calculations.",
+    "The platformConfigs collection uses a key/value pattern to store admin-configurable parameters (REQ-42) such as defaultCommissionRate, defaultDeliveryRadiusKm, accountLockDurationMinutes, sessionTokenTTLHours, agentOfferTimeoutSeconds. The Mixed value type accommodates numeric, boolean, and string config values.",
+    "agentLocationHistory inside Delivery is a capped-style array suitable for v1. For production scale, consider offloading live location streams to a time-series collection or Redis; the history embedded here serves the proof-of-delivery and ETA recalculation use cases at launch volume.",
+    "The sparse unique indexes on users.email and users.phone accommodate users who register with only one of the two identifiers (REQ-1).",
+    "RBAC is enforced at the application/middleware layer using the role field on User; no separate permissions collection is modelled as the four roles are fixed and defined in the requirements."
+  ],
+  "datastore_product": "MongoDB"
+}

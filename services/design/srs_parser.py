@@ -134,6 +134,7 @@ class SRSParser:
         self.performance: list[dict] = []
         self.business_rules: list[dict] = []
         self.constraints: list[str] = []
+        self.tech_stack: list[dict] = []       # Section 7 Technology Stack (per subsection)
         self.external_interfaces: list[dict] = []
         self.ui_requirements: list[dict] = []   # source for Design Tokens (prose)
         self.ui_tokens: dict[str, list] = {}    # structured token tables (3.1.x)
@@ -250,6 +251,15 @@ class SRSParser:
         )
 
     def _handle_section_prose(self, par: Paragraph, text: str):
+        # Section 7 Technology Stack -> tech_stack (prose + bullets, per subsection)
+        if self.h1_num == "7":
+            section = (f"{self.h2_num} {self.h2}".strip() if self.h2_num
+                       else f"{self.h1_num} {self.h1}".strip())   # intro sits under "7"
+            step = re.sub(r"^[\-\u2022\*\u2013]\s*", "", text).strip()
+            if step:
+                self.tech_stack.append({"section": section, "text": step})
+            return
+
         # 2.5 Design and Implementation Constraints -> constraints list
         if self.h2_num == "2.5":
             self.constraints.append(text)
@@ -440,10 +450,10 @@ class SRSParser:
             "ui_token_source": self.ui_requirements,
             "ui_tokens": self.ui_tokens,
             "tech_stack": (
-                "Not fixed by the SRS (requirements-level document). "
-                "Stack is decided in Design; see constraints + external_interfaces "
-                "for imposed technical constraints (API-gateway/services, relational DB, "
-                "TLS 1.2+, PCI-DSS tokenization)."
+                self.tech_stack if self.tech_stack else
+                [{"section": "", "text":
+                    "Not specified in the SRS (no Technology Stack section). Decided in "
+                    "Design; see constraints + external_interfaces for imposed constraints."}]
             ),
         }
         glossary = {"terms": self.glossary}
@@ -497,7 +507,16 @@ class SRSParser:
                 lines.append(f"\n### {group.replace('_',' ').title()} ({len(rows)})")
                 for row in rows:
                     lines.append("- " + " · ".join(f"{k}: {v}" for k, v in row.items() if v))
-        lines.append(f"\n## Tech Stack\n{er['tech_stack']}")
+        lines.append("\n## Tech Stack")
+        if er["tech_stack"] and er["tech_stack"][0].get("section"):
+            last = None
+            for item in er["tech_stack"]:
+                if item["section"] != last:
+                    lines.append(f"\n### {item['section']}")
+                    last = item["section"]
+                lines.append(f"- {item['text']}")
+        else:
+            lines.append(er["tech_stack"][0]["text"])
         (out / "extracted_requirements.md").write_text("\n".join(lines), encoding="utf-8")
 
         g = arts["glossary"]["terms"]
@@ -590,14 +609,8 @@ def main():
     print(f"  Extracted Requirements: {len(er['functional'])} functional · "
           f"{len(er['performance'])} performance · {len(er['non_functional'])} non-functional · "
           f"{len(er['business_rules'])} business rules · {len(er['constraints'])} constraints · "
-          f"{len(er['external_interfaces'])} interfaces · {len(er['ui_token_source'])} UI-token items")
-    print(f"  Glossary:      {len(arts['glossary']['terms'])} terms")
-    print(f"  User Features: {len(uf['roles'])} roles · {len(uf['entities'])} entities · "
-          f"{len(uf['features'])} features")
-    print(f"  Extracted Requirements: {len(er['functional'])} functional · "
-          f"{len(er['performance'])} performance · {len(er['non_functional'])} non-functional · "
-          f"{len(er['business_rules'])} business rules · {len(er['constraints'])} constraints · "
-          f"{len(er['external_interfaces'])} interfaces · {len(er['ui_token_source'])} UI-token items")
+          f"{len(er['external_interfaces'])} interfaces · {len(er['ui_token_source'])} UI-token items · "
+          f"{len(er['tech_stack'])} tech-stack items")
     print(f"  Glossary:      {len(arts['glossary']['terms'])} terms")
     print(f"  User Features: {len(uf['roles'])} roles · {len(uf['entities'])} entities · "
           f"{len(uf['features'])} features")
