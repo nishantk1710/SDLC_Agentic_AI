@@ -8,3 +8,5 @@ python-docx==1.2.0
 # If this is absent the script still runs, reading SHARED_DIR from the real
 # environment instead of a .env file.
 python-dotenv==1.0.1
+
+anthropic
