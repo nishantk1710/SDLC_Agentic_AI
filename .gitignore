@@ -31,3 +31,17 @@ Thumbs.db
 # --- Docker / local data ---
 pgdata/
 redisdata/
+
+# --- Testing phase local data (ignore contents, keep folder structure) ---
+services/testing/data/**
+!services/testing/data/**/
+!services/testing/data/**/.gitkeep
+
+# --- Shared contract artifacts (ignore payloads, keep folder structure) ---
+contracts/shared/SRS/**
+contracts/shared/design-artifact/**
+contracts/shared/zipped_code/**
+!contracts/shared/SRS/**/
+!contracts/shared/design-artifact/**/
+!contracts/shared/zipped_code/**/
+!contracts/shared/**/.gitkeep
