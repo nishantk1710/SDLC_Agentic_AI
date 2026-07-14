@@ -4,57 +4,60 @@
 **Contains:** the team's conventions so all generated code reads as one author.
 
 ```markdown
-- Source every color, spacing, typography, border-radius, and shadow value from the shared design-token file; never hard-code hex values, px sizes, or font strings inline.
-- Never log, store, or transmit raw card numbers, CVVs, or full PANs anywhere in the codebase; accept only the gateway-issued token and last-four digits.
-- Enforce RBAC via a dedicated requireRole(...roles) middleware applied at the router level before every privileged route — never inline role checks inside controllers.
-- Use Mongoose query builders or parameterized filter objects exclusively — never build query strings through string concatenation or template literals.
-- Hash all passwords with bcrypt (minimum cost factor 12) before persistence; never store or log plaintext credentials.
-- Log all administrative actions as structured JSON with fields: actorId, role, action, affectedEntityId, and ISO-8601 timestamp.
-- Wrap all external provider calls (payment gateway, mapping, messaging) in a try/catch with a provider-specific error boundary so failures degrade only that feature.
-- Apply express-rate-limit to all /auth/* and /payments/* route groups with environment-configurable window and max values.
+- Every privileged route must pass through authenticate JWT middleware then authorizeRoles(...roles) RBAC middleware before any controller logic.
+- Never log, persist, or pass raw card numbers, CVVs, or full PANs anywhere in the codebase; accept and store only the payment gateway token.
+- Use Mongoose query builders and parameterized conditions exclusively — never concatenate user input into a query string or $where clause.
+- Source every color, spacing, typography, border-radius, and shadow value from the shared design-token file — never hard-code hex values, px literals, or raw font sizes.
+- Apply express-rate-limit to every /auth/* and /payments/* route at the router level; it is not sufficient to apply it globally.
+- Log every administrative action as a structured audit record containing actorId, role, action, affectedEntityId, and ISO-8601 timestamp written to the audit collection.
+- Store passwords exclusively as bcrypt hashes (saltRounds ≥ 12); plain-text or reversibly-encrypted passwords in any layer are forbidden.
+- Wrap all external provider calls (payment, mapping, messaging) in a provider-specific error class so failures degrade only that function and never crash unrelated services.
 ```
 
-> Conventions for MERN stack (MongoDB + Mongoose, Express.js, React SPA, Node.js) with Socket.IO, JWT/RBAC auth, PCI-DSS tokenized payments, and a shared design-token component library across four browser SPAs. Generated code must read as one author.
+> Conventions for MERN stack (MongoDB/Mongoose, Express.js, Node.js, React) with Socket.IO, JWT/RBAC auth, PCI-compliant payment tokenization, and a shared design-token component library across four browser SPAs. Generated code must read as one author.
 
 ### Project Structure & Naming
-- Name React component files and component functions in PascalCase (e.g. OrderCard.jsx); name all other JS/TS files in kebab-case (e.g. order-service.js).
-- Organize each Express service as gateway → router → controller → service → repository; no business logic in routers, no DB calls in controllers.
-- Place shared Mongoose schemas/models in a single @quickbite/data-access package imported by all services — never duplicate schema definitions.
-- Co-locate each React feature under src/features/<feature>/ containing its components, hooks, slice, and styles; shared UI lives in src/components/.
-- Name Socket.IO event constants in SCREAMING_SNAKE_CASE from a shared events.js enum file (e.g. ORDER_STATUS_UPDATED); never use bare string literals in emit/on calls.
+- Name React component files PascalCase (e.g. MenuItemCard.jsx); all other JS/TS files kebab-case (e.g. order-service.js).
+- Organize each Express service as gateway → router → controller → service → repository; no business logic in routers or controllers.
+- Place shared Mongoose schemas/models in a single shared data-access package imported by all services — never duplicate schema definitions.
+- Prefix Socket.IO event name constants with the domain namespace (e.g. ORDER_STATUS_UPDATED, DELIVERY_LOCATION_CHANGED) and define them in a shared constants file.
+- Co-locate each React feature under src/features/<feature>/ containing its components, hooks, and slice — no flat global components folder for feature-specific code.
 
-### Components & UI
-- Write all React components as named functional components with hooks — no class components.
-- Source every color, spacing, typography, border-radius, and shadow value from the shared design-token file; never hard-code hex values, px sizes, or font strings inline.
-- Apply responsive breakpoints using the token-defined breakpoint variables; customer and delivery-agent layouts must render correctly at mobile widths without separate components.
-- Delivery-agent action buttons must be single-tap confirmable — no multi-step dialogs for in-progress status updates.
-- Display allergen and dietary flags on every MenuItemCard directly from the item's data model; never suppress or omit them when the field is present.
+### React & Component Library
+- Write only functional React components with hooks; class components are forbidden.
+- Source every color, spacing, typography, border-radius, and shadow value from the shared design-token file — never hard-code hex values, px literals, or raw font sizes.
+- Use the shared component library for all UI primitives (buttons, inputs, modals); only extend, never rewrite, primitives inline per-feature.
+- Manage all async server state with a data-fetching library (e.g. React Query or SWR); do not store server responses directly in useState or Redux.
+- Mark delivery-agent tap targets with a minimum 48 × 48 px touch target enforced via design tokens; single-tap confirmation actions must require no secondary interaction.
+- Gate browser Geolocation and MediaDevices/getUserMedia calls behind explicit permission prompts; handle denied/unavailable states with a visible fallback UI, never a silent failure.
 
-### API & Real-Time Layer
-- Every Express route handler must pass errors to next(err) — no unhandled promise rejections; use a single global error-handling middleware per service.
-- Wrap all external provider calls (payment gateway, mapping, messaging) in a try/catch with a provider-specific error boundary so failures degrade only that feature.
-- Enforce RBAC via a dedicated requireRole(...roles) middleware applied at the router level before every privileged route — never inline role checks inside controllers.
-- Apply express-rate-limit to all /auth/* and /payments/* route groups with environment-configurable window and max values.
-- Validate and sanitize all inbound request bodies with a schema-validation middleware (e.g. express-validator or Joi) before the request reaches the controller.
-- All outbound HTTP calls to third-party APIs must use HTTPS endpoints only — reject any configuration specifying http://.
+### Express Services & API Design
+- Every privileged route must pass through the authenticate JWT middleware then the authorizeRoles(...roles) RBAC middleware before any controller logic.
+- Apply express-rate-limit to every /auth/* and /payments/* route at the router level, not globally.
+- Return errors using a single centralized error-handler middleware; controllers must call next(err) — never res.send error objects directly.
+- Validate and sanitize all inbound request bodies with a schema-validation library (e.g. Joi or Zod) at the router layer before the controller is invoked.
+- Wrap all external provider calls (payment gateway, mapping API, messaging provider) in a try/catch with a provider-specific error class; let errors propagate as ServiceUnavailableError so failures degrade only that function.
+- Expose only RESTful HTTPS endpoints; all inter-service calls go through the API gateway, never direct service-to-service HTTP.
 
-### Data Access & Security
-- Use Mongoose query builders or parameterized filter objects exclusively — never build query strings through string concatenation or template literals.
-- Never log, store, or transmit raw card numbers, CVVs, or full PANs anywhere in the codebase; accept only the gateway-issued token and last-four digits.
-- Hash all passwords with bcrypt (minimum cost factor 12) before persistence; never store or log plaintext credentials.
-- Sign JWTs with a secret sourced from environment variables; verify signature, expiry, and role claim in the requireRole middleware on every protected request.
-- Encrypt sensitive fields at rest (e.g. PII beyond email) using the platform encryption utility — never store them as plaintext in MongoDB documents.
-- Write every confirmed order and payment mutation inside a Mongoose session/transaction to guarantee durability across document collections.
+### Data Access & MongoDB
+- Use Mongoose query builders and parameterized conditions exclusively — never concatenate user input into a query string or $where clause.
+- Define all collection schemas in the shared data-access package with explicit field types, required flags, and index declarations; no schemaless ad-hoc inserts.
+- Use Mongoose transactions for any operation that writes to more than one collection (e.g. order + payment + inventory) to satisfy durability requirements.
+- Never log, persist, or pass raw card numbers, CVVs, or full PANs anywhere in the codebase; accept and store only the payment gateway's token and last-four/brand metadata.
+- Store passwords exclusively as bcrypt hashes (saltRounds ≥ 12); plain-text or reversibly-encrypted passwords in any layer are forbidden.
 
-### Logging, Auditing & Error Handling
-- Log all administrative actions (refunds, review removal, user management) as structured JSON with fields: actorId, role, action, affectedEntityId, and ISO-8601 timestamp.
-- Use a structured logger (e.g. pino or winston JSON transport) for all server-side logging — never use console.log in production code paths.
-- Never log JWT payloads, passwords, raw card data, or full PII fields; redact or omit them explicitly in log serializers.
-- Return RFC 7807 Problem Detail JSON ({type, title, status, detail}) from all Express error handlers — never leak stack traces to API consumers.
+### Security & Compliance
+- Set JWT expiry to ≤ 15 minutes for access tokens; supply a separate refresh-token flow — never extend expiry by re-signing with the same payload.
+- Log every administrative action (refunds, review removal, user bans) as a structured audit record containing actorId, role, action, affectedEntityId, and ISO-8601 timestamp; write to the audit collection, never only to stdout.
+- Enforce TLS 1.2+ at the API gateway and reject any inbound connection that negotiates a lower protocol version.
+- Set HTTP security headers (helmet defaults) on every Express service; additionally set Content-Security-Policy, Referrer-Policy, and Permissions-Policy headers.
+- Sensitive environment variables (JWT secret, payment API key, DB URI) must be injected via environment variables; committing secrets to source control is forbidden and enforced by pre-commit hook.
 
-### Configuration & Environment
-- Source all secrets, API keys, DB URIs, rate-limit thresholds, and commission rates from environment variables via a validated config module — no hard-coded values in source.
-- Store restaurant delivery-radius and commission-rate values in the DB configuration collection, not in code, so they are configurable without a redeploy.
-- All service-to-service and service-to-gateway communication must use TLS 1.2+ endpoints; reject connections that negotiate below TLS 1.2 at the HTTP client configuration level.
+### Real-Time, Error Handling & Observability
+- Emit Socket.IO events only from the service layer after a confirmed database write; never emit optimistically before persistence.
+- All Socket.IO event handlers must authenticate the socket on connection using the same JWT middleware used by REST routes.
+- Catch and handle all unhandledRejection and uncaughtException events at the Node.js process level; log structured JSON then exit — never swallow them silently.
+- Emit structured JSON logs (level, timestamp, serviceId, traceId, message) from every service; do not use unstructured console.log in production paths.
+- Instrument search and order-placement code paths with latency timers and emit metrics that can be compared against the 2 s / 3 s p95 SLA targets.
 
 ---

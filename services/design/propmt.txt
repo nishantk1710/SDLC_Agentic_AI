@@ -1,0 +1,42 @@
+## 5. API Contract (Backend) + Sample Payloads
+
+**Satisfies:** D2 (API Specification), D5 (Sample Payloads)
+
+**Format:** OpenAPI YAML — `openapi.yaml`, with real example payloads embedded as `examples:` (or a companion `sample-payloads.json`).
+
+**Contains:** every endpoint (method, path, params, typed request/response), error shapes, auth per endpoint, and realistic sample request/response bodies to build and test against.
+
+```yaml
+
+paths:
+
+  /products/{id}:
+
+    get:
+
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+
+      responses:
+
+        '200':
+
+          content:
+
+            application/json:
+
+              schema: { $ref: '#/components/schemas/Product' }
+
+              example: { id: "123", name: "Wireless Mouse", price: 799.00, inStock: true }
+
+
+
+
+
+
+4 · Contract	API Contract Generator	Extracted Req, DB Schema, BE Structure	API Contract (OpenAPI) + sample payloads
+
+
+
+
+
+now create the api contract creator agent with similar thinking approach

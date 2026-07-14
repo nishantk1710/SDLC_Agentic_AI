@@ -3,307 +3,318 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-// Single unified auth identity for all roles; role-specific profile data lives in its own collection referencing this document
+// Single account record for all roles; role-specific profile data embedded as subdocuments
 const UserSchema = new Schema({
-  email: { type: String, unique: true },
-  phone: { type: String, unique: true },
+  email: { type: String },
+  phone: { type: String },
   passwordHash: { type: String, required: true },
-  role: { type: String, required: true, enum: ["customer", "restaurantManager", "deliveryAgent", "admin"] },
-  isVerified: { type: Boolean, required: true, default: False },
+  role: { type: String, required: true, enum: ["customer", "restaurantManager", "deliveryAgent", "platformAdmin"] },
+  isVerified: { type: Boolean, required: true, default: false },
   verificationToken: { type: String },
-  verificationTokenExpiry: { type: Date },
+  verificationTokenExpiresAt: { type: Date },
   passwordResetToken: { type: String },
-  passwordResetExpiry: { type: Date },
+  passwordResetExpiresAt: { type: Date },
   failedLoginAttempts: { type: Number, required: true, default: 0 },
   lockedUntil: { type: Date },
-  isActive: { type: Boolean, required: true, default: True },
+  status: { type: String, required: true, enum: ["active", "suspended", "pending"], default: "pending" },
   fullName: { type: String, required: true },
-  avatarUrl: { type: String }
-}, { timestamps: true });
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ phone: 1 }, { unique: true });
-UserSchema.index({ role: 1 });
-UserSchema.index({ passwordResetToken: 1 });
-const User = mongoose.model('User', UserSchema);
-
-// Customer-specific profile extending User; holds saved delivery addresses
-const CustomerSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  avatarUrl: { type: String },
   savedAddresses: [{
-    _id: { type: Schema.Types.ObjectId },
+    _id: { type: Schema.Types.ObjectId, required: true },
     label: { type: String },
     line1: { type: String, required: true },
     line2: { type: String },
     city: { type: String, required: true },
-    postcode: { type: String, required: true },
-    coordinates: {
-      lat: { type: Number, required: true },
-      lng: { type: Number, required: true }
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: [{ type: Number, required: true }]
     },
-    isDefault: { type: Boolean, default: False }
+    isDefault: { type: Boolean, default: false }
   }],
-  preferredPaymentMethod: { type: String, enum: ["card", "wallet", "cod"] }
-}, { timestamps: true });
-CustomerSchema.index({ userId: 1 }, { unique: true });
-const Customer = mongoose.model('Customer', CustomerSchema);
-
-// Restaurant-manager-specific profile; links a user to one restaurant
-const RestaurantManagerSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true }
-}, { timestamps: true });
-RestaurantManagerSchema.index({ userId: 1 }, { unique: true });
-RestaurantManagerSchema.index({ restaurantId: 1 });
-const RestaurantManager = mongoose.model('RestaurantManager', RestaurantManagerSchema);
-
-// Delivery-agent-specific profile with live availability and location state
-const DeliveryAgentSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  status: { type: String, required: true, enum: ["offline", "available", "busy"], default: "offline" },
-  isApproved: { type: Boolean, required: true, default: False },
-  isSuspended: { type: Boolean, required: true, default: False },
-  currentLocation: {
-    lat: { type: Number },
-    lng: { type: Number },
-    updatedAt: { type: Date }
+  agentProfile: {
+    isAvailable: { type: Boolean, default: false },
+    vehicleType: { type: String },
+    licencePlate: { type: String },
+    currentLocation: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: [{ type: Number, required: true }]
+    },
+    locationUpdatedAt: { type: Date }
   },
-  vehicleType: { type: String, enum: ["bicycle", "motorcycle", "car"] },
-  activeDeliveryId: { type: Schema.Types.ObjectId, ref: 'Delivery' }
+  managerProfile: {
+    restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant' }
+  },
+  pushTokens: [{ type: String }],
+  notificationPreferences: { type: Schema.Types.Mixed }
 }, { timestamps: true });
-DeliveryAgentSchema.index({ userId: 1 }, { unique: true });
-DeliveryAgentSchema.index({ status: 1 });
-DeliveryAgentSchema.index({ currentLocation.lat: 1, currentLocation.lng: 1 });
-const DeliveryAgent = mongoose.model('DeliveryAgent', DeliveryAgentSchema);
+UserSchema.index({ email: 1 }, { unique: true, sparse: true });
+UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
+UserSchema.index({ role: 1 });
+UserSchema.index({ status: 1 });
+UserSchema.index({ verificationToken: 1 }, { sparse: true });
+UserSchema.index({ passwordResetToken: 1 }, { sparse: true });
+UserSchema.index({ 'agentProfile.currentLocation': '2dsphere' }, { sparse: true });
+const User = mongoose.model('User', UserSchema);
 
-// Restaurant aggregate root; embeds full menu hierarchy (categories → items) for single-fetch browsing
+// Restaurant partner profile with embedded menu categories and menu items as the primary browse/discovery document
 const RestaurantSchema = new Schema({
   name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
   description: { type: String },
   cuisineTypes: [{ type: String, required: true }],
   logoUrl: { type: String },
   bannerUrl: { type: String },
+  managerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, required: true, enum: ["active", "suspended", "pending"], default: "pending" },
+  isOpen: { type: Boolean, required: true, default: false },
   address: {
     line1: { type: String, required: true },
     line2: { type: String },
     city: { type: String, required: true },
-    postcode: { type: String, required: true },
-    coordinates: {
-      lat: { type: Number, required: true },
-      lng: { type: Number, required: true }
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: [{ type: Number, required: true }]
     }
   },
-  phone: { type: String },
-  isOpen: { type: Boolean, required: true, default: False },
-  isApproved: { type: Boolean, required: true, default: False },
-  isSuspended: { type: Boolean, required: true, default: False },
+  deliveryRadiusKm: { type: Number, required: true, default: 5 },
+  deliveryFee: { type: Schema.Types.Decimal128, required: true },
+  minimumOrderValue: { type: Schema.Types.Decimal128, required: true },
+  estimatedDeliveryMinutes: { type: Number, required: true },
+  avgRating: { type: Number, default: 0 },
+  reviewCount: { type: Number, default: 0 },
+  allowsCashOnDelivery: { type: Boolean, default: false },
   operatingHours: [{
     dayOfWeek: { type: Number, required: true },
     openTime: { type: String, required: true },
     closeTime: { type: String, required: true }
   }],
-  deliveryRadiusKm: { type: Number, required: true },
-  deliveryFee: { type: Schema.Types.Decimal128, required: true },
-  minimumOrderValue: { type: Schema.Types.Decimal128, required: true },
-  estimatedDeliveryMinutes: { type: Number, required: true },
-  allowsCOD: { type: Boolean, required: true, default: False },
-  avgRating: { type: Number, default: 0 },
-  reviewCount: { type: Number, default: 0 },
-  commissionRate: { type: Number },
   menuCategories: [{
-    _id: { type: Schema.Types.ObjectId },
+    _id: { type: Schema.Types.ObjectId, required: true },
     name: { type: String, required: true },
     description: { type: String },
     sortOrder: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: True },
+    isAvailable: { type: Boolean, default: true },
     items: [{
-      _id: { type: Schema.Types.ObjectId },
+      _id: { type: Schema.Types.ObjectId, required: true },
       name: { type: String, required: true },
       description: { type: String },
       price: { type: Schema.Types.Decimal128, required: true },
       imageUrl: { type: String },
-      isAvailable: { type: Boolean, required: true, default: True },
+      isAvailable: { type: Boolean, default: true },
       sortOrder: { type: Number, default: 0 },
-      tags: [{ type: String }]
+      tags: [{ type: String }],
+      allergens: [{ type: String }]
     }]
-  }]
+  }],
+  commissionRate: { type: Number },
+  onboardedAt: { type: Date },
+  suspendedAt: { type: Date },
+  suspensionReason: { type: String }
 }, { timestamps: true });
-RestaurantSchema.index({ isApproved: 1, isSuspended: 1, isOpen: 1 });
+RestaurantSchema.index({ slug: 1 }, { unique: true });
+RestaurantSchema.index({ managerId: 1 });
+RestaurantSchema.index({ status: 1 });
 RestaurantSchema.index({ cuisineTypes: 1 });
+RestaurantSchema.index({ isOpen: 1 });
 RestaurantSchema.index({ avgRating: 1 });
-RestaurantSchema.index({ estimatedDeliveryMinutes: 1 });
-RestaurantSchema.index({ address.coordinates.lat: 1, address.coordinates.lng: 1 });
-RestaurantSchema.index({ name: 1 });
+RestaurantSchema.index({ 'address.location': '2dsphere' });
+RestaurantSchema.index({ name: 'text', cuisineTypes: 'text' });
 const Restaurant = mongoose.model('Restaurant', RestaurantSchema);
 
-// One active cart per customer per restaurant; cleared on order placement or explicit abandon
+// Transient per-customer per-restaurant cart; TTL expiry after prolonged inactivity
 const CartSchema = new Schema({
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
-  items: [{
-    menuItemId: { type: Schema.Types.ObjectId, required: true },
-    name: { type: String, required: true },
-    price: { type: Schema.Types.Decimal128, required: true },
-    quantity: { type: Number, required: true },
-    imageUrl: { type: String }
-  }],
-  subtotal: { type: Schema.Types.Decimal128, required: true },
-  deliveryFeeSnapshot: { type: Schema.Types.Decimal128 },
-  taxAmount: { type: Schema.Types.Decimal128 },
-  total: { type: Schema.Types.Decimal128 },
-  fulfillmentType: { type: String, enum: ["delivery", "pickup"], default: "delivery" },
-  deliveryAddressId: { type: Schema.Types.ObjectId }
-}, { timestamps: true });
-CartSchema.index({ customerId: 1, restaurantId: 1 }, { unique: true });
-CartSchema.index({ customerId: 1 });
-const Cart = mongoose.model('Cart', CartSchema);
-
-// Placed-order aggregate root; snapshots item names and prices for financial integrity; references Restaurant, Customer, and Agent
-const OrderSchema = new Schema({
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-  restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
-  restaurantName: { type: String, required: true },
-  status: { type: String, required: true, enum: ["pendingRestaurantAcceptance", "accepted", "preparing", "ready", "outForDelivery", "delivered", "cancelledByCustomer", "cancelledByRestaurant", "cancelledByAdmin"], default: "pendingRestaurantAcceptance" },
-  fulfillmentType: { type: String, required: true, enum: ["delivery", "pickup"] },
-  deliveryAddress: {
-    line1: { type: String, required: true },
-    line2: { type: String },
-    city: { type: String, required: true },
-    postcode: { type: String, required: true },
-    coordinates: {
-      lat: { type: Number },
-      lng: { type: Number }
-    }
-  },
   items: [{
     menuItemId: { type: Schema.Types.ObjectId, required: true },
     name: { type: String, required: true },
     unitPrice: { type: Schema.Types.Decimal128, required: true },
     quantity: { type: Number, required: true },
-    lineTotal: { type: Schema.Types.Decimal128, required: true }
+    imageUrl: { type: String },
+    specialInstructions: { type: String }
+  }],
+  subtotal: { type: Schema.Types.Decimal128, required: true, default: 0 },
+  deliveryFeeSnapshot: { type: Schema.Types.Decimal128 },
+  taxAmount: { type: Schema.Types.Decimal128 },
+  total: { type: Schema.Types.Decimal128 },
+  fulfillmentType: { type: String, enum: ["delivery", "pickup"], default: "delivery" },
+  deliveryAddressId: { type: Schema.Types.ObjectId },
+  lastActivityAt: { type: Date, required: true }
+}, { timestamps: true });
+CartSchema.index({ customerId: 1, restaurantId: 1 }, { unique: true });
+CartSchema.index({ customerId: 1 });
+CartSchema.index({ lastActivityAt: 1 }, { expireAfterSeconds: 259200 });
+const Cart = mongoose.model('Cart', CartSchema);
+
+// Confirmed order aggregate with snapshotted items, pricing, delivery address, and status history
+const OrderSchema = new Schema({
+  orderNumber: { type: String, required: true, unique: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+  restaurantNameSnapshot: { type: String, required: true },
+  items: [{
+    menuItemId: { type: Schema.Types.ObjectId, required: true },
+    name: { type: String, required: true },
+    unitPrice: { type: Schema.Types.Decimal128, required: true },
+    quantity: { type: Number, required: true },
+    lineTotal: { type: Schema.Types.Decimal128, required: true },
+    specialInstructions: { type: String }
   }],
   subtotal: { type: Schema.Types.Decimal128, required: true },
   deliveryFee: { type: Schema.Types.Decimal128, required: true },
   taxAmount: { type: Schema.Types.Decimal128, required: true },
   total: { type: Schema.Types.Decimal128, required: true },
   commissionAmount: { type: Schema.Types.Decimal128 },
-  rejectionReason: { type: String },
-  cancellationReason: { type: String },
-  deliveryAgentId: { type: Schema.Types.ObjectId, ref: 'DeliveryAgent' },
+  fulfillmentType: { type: String, required: true, enum: ["delivery", "pickup"] },
+  deliveryAddress: {
+    line1: { type: String, required: true },
+    line2: { type: String },
+    city: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: [{ type: Number, required: true }]
+    }
+  },
+  status: { type: String, required: true, enum: ["pendingRestaurantAcceptance", "accepted", "preparing", "ready", "outForDelivery", "delivered", "cancelledByCustomer", "cancelledByRestaurant", "cancelledByAdmin"] },
   statusHistory: [{
     status: { type: String, required: true },
-    changedAt: { type: Date, required: true },
-    changedBy: { type: Schema.Types.ObjectId, ref: 'User' }
+    occurredAt: { type: Date, required: true },
+    note: { type: String }
   }],
-  estimatedDeliveryMinutes: { type: Number },
-  placedAt: { type: Date, required: true },
-  acceptedAt: { type: Date },
-  deliveredAt: { type: Date }
+  rejectionReason: { type: String },
+  cancellationReason: { type: String },
+  paymentId: { type: Schema.Types.ObjectId, ref: 'Payment' },
+  deliveryId: { type: Schema.Types.ObjectId, ref: 'Delivery' },
+  reviewId: { type: Schema.Types.ObjectId, ref: 'Review' },
+  restaurantAcceptedAt: { type: Date },
+  readyAt: { type: Date },
+  deliveredAt: { type: Date },
+  estimatedDeliveryTime: { type: Date },
+  specialInstructions: { type: String }
 }, { timestamps: true });
-OrderSchema.index({ customerId: 1, placedAt: 1 });
+OrderSchema.index({ orderNumber: 1 }, { unique: true });
+OrderSchema.index({ customerId: 1, status: 1 });
 OrderSchema.index({ restaurantId: 1, status: 1 });
-OrderSchema.index({ restaurantId: 1, placedAt: 1 });
-OrderSchema.index({ deliveryAgentId: 1, status: 1 });
 OrderSchema.index({ status: 1 });
-OrderSchema.index({ placedAt: 1 });
+OrderSchema.index({ paymentId: 1 });
+OrderSchema.index({ deliveryId: 1 });
 const Order = mongoose.model('Order', OrderSchema);
 
-// One payment record per order; stores gateway reference and tokenized method details only — no raw card data
+// Payment gateway transaction record per order; no raw card data stored
 const PaymentSchema = new Schema({
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true, unique: true },
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-  method: { type: String, required: true, enum: ["card", "wallet", "cod"] },
-  status: { type: String, required: true, enum: ["pending", "authorized", "captured", "failed", "refunded", "partiallyRefunded", "voided"], default: "pending" },
+  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  method: { type: String, required: true, enum: ["card", "digitalWallet", "cashOnDelivery"] },
+  status: { type: String, required: true, enum: ["pending", "authorized", "captured", "failed", "refunded", "partiallyRefunded", "voided"] },
   amount: { type: Schema.Types.Decimal128, required: true },
-  currency: { type: String, required: true, default: "GBP" },
-  gatewayTransactionId: { type: String },
+  currency: { type: String, required: true, default: "USD" },
+  gatewayTransactionRef: { type: String },
   gatewayPaymentToken: { type: String },
-  gatewayResponse: { type: Schema.Types.Mixed },
+  gatewayResponseCode: { type: String },
+  authorizedAt: { type: Date },
+  capturedAt: { type: Date },
   refunds: [{
+    _id: { type: Schema.Types.ObjectId, required: true },
     amount: { type: Schema.Types.Decimal128, required: true },
-    reason: { type: String },
-    gatewayRefundId: { type: String },
+    reason: { type: String, required: true },
+    gatewayRefundRef: { type: String },
     initiatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    processedAt: { type: Date }
-  }],
-  paidAt: { type: Date }
+    refundedAt: { type: Date, required: true }
+  }]
 }, { timestamps: true });
 PaymentSchema.index({ orderId: 1 }, { unique: true });
 PaymentSchema.index({ customerId: 1 });
-PaymentSchema.index({ gatewayTransactionId: 1 });
 PaymentSchema.index({ status: 1 });
+PaymentSchema.index({ gatewayTransactionRef: 1 }, { sparse: true });
 const Payment = mongoose.model('Payment', PaymentSchema);
 
-// Delivery lifecycle for one order; tracks agent assignment, live location snapshots, status, and proof-of-delivery
+// Delivery lifecycle record per order; decoupled from order for independent agent-location write scaling
 const DeliverySchema = new Schema({
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true, unique: true },
+  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
   restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-  deliveryAgentId: { type: Schema.Types.ObjectId, ref: 'DeliveryAgent' },
-  status: { type: String, required: true, enum: ["unassigned", "offered", "assigned", "pickedUp", "delivered", "failed", "cancelled"], default: "unassigned" },
+  agentId: { type: Schema.Types.ObjectId, ref: 'User' },
+  status: { type: String, required: true, enum: ["unassigned", "offered", "agentAccepted", "agentDeclined", "pickedUp", "delivered", "failed"], default: "unassigned" },
+  restaurantLocation: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: [{ type: Number, required: true }]
+  },
+  deliveryLocation: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: [{ type: Number, required: true }]
+  },
+  agentLiveLocation: {
+    type: { type: String, enum: ["Point"], default: "Point" },
+    coordinates: [{ type: Number, required: true }]
+  },
+  agentLocationUpdatedAt: { type: Date },
+  estimatedArrivalAt: { type: Date },
+  offeredAt: { type: Date },
   offerExpiresAt: { type: Date },
-  assignmentAttempts: [{
-    agentId: { type: Schema.Types.ObjectId, ref: 'DeliveryAgent' },
-    offeredAt: { type: Date },
-    outcome: { type: String, enum: ["accepted", "declined", "timeout"] }
-  }],
-  pickupAddress: {
-    line1: { type: String },
-    city: { type: String },
-    coordinates: {
-      lat: { type: Number },
-      lng: { type: Number }
-    }
-  },
-  dropoffAddress: {
-    line1: { type: String },
-    city: { type: String },
-    coordinates: {
-      lat: { type: Number },
-      lng: { type: Number }
-    }
-  },
-  estimatedPickupAt: { type: Date },
-  estimatedDropoffAt: { type: Date },
-  actualPickedUpAt: { type: Date },
-  actualDeliveredAt: { type: Date },
+  acceptedAt: { type: Date },
+  pickedUpAt: { type: Date },
+  deliveredAt: { type: Date },
   proofOfDeliveryUrl: { type: String },
-  agentLocationHistory: [{
-    lat: { type: Number },
-    lng: { type: Number },
-    recordedAt: { type: Date }
+  assignmentAttempts: { type: Number, default: 0 },
+  declinedByAgents: [{
+    agentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    declinedAt: { type: Date, required: true }
   }]
 }, { timestamps: true });
 DeliverySchema.index({ orderId: 1 }, { unique: true });
-DeliverySchema.index({ deliveryAgentId: 1, status: 1 });
+DeliverySchema.index({ agentId: 1, status: 1 });
 DeliverySchema.index({ status: 1 });
-DeliverySchema.index({ restaurantId: 1 });
+DeliverySchema.index({ restaurantLocation: '2dsphere' });
+DeliverySchema.index({ agentLiveLocation: '2dsphere' });
 const Delivery = mongoose.model('Delivery', DeliverySchema);
 
-// One customer review per delivered order; used to recompute restaurant avgRating
+// One customer review per delivered order; triggers denormalised avgRating update on Restaurant
 const ReviewSchema = new Schema({
-  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true, unique: true },
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+  orderId: { type: Schema.Types.ObjectId, ref: 'Order', required: true },
   restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   rating: { type: Number, required: true },
   comment: { type: String },
-  isVisible: { type: Boolean, required: true, default: True },
-  removedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  isVisible: { type: Boolean, required: true, default: true },
+  removedByAdminId: { type: Schema.Types.ObjectId, ref: 'User' },
   removedAt: { type: Date },
   removalReason: { type: String }
 }, { timestamps: true });
 ReviewSchema.index({ orderId: 1 }, { unique: true });
 ReviewSchema.index({ restaurantId: 1, isVisible: 1 });
 ReviewSchema.index({ customerId: 1 });
+ReviewSchema.index({ rating: 1 });
 const Review = mongoose.model('Review', ReviewSchema);
 
-// Singleton-style admin-controlled configuration document for platform-wide parameters
+// Singleton-style admin-managed platform configuration parameters
 const PlatformConfigSchema = new Schema({
   key: { type: String, required: true, unique: true },
   value: { type: Schema.Types.Mixed, required: true },
   description: { type: String },
-  updatedBy: { type: Schema.Types.ObjectId, ref: 'User' }
+  lastUpdatedBy: { type: Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 PlatformConfigSchema.index({ key: 1 }, { unique: true });
 const PlatformConfig = mongoose.model('PlatformConfig', PlatformConfigSchema);
 
-module.exports = { User, Customer, RestaurantManager, DeliveryAgent, Restaurant, Cart, Order, Payment, Delivery, Review, PlatformConfig };
+// Immutable log of privileged administrative actions per REQ-40 / RBAC requirements
+const AdminAuditLogSchema = new Schema({
+  adminId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  action: { type: String, required: true },
+  entityType: { type: String, required: true },
+  entityId: { type: Schema.Types.ObjectId, required: true },
+  before: { type: Schema.Types.Mixed },
+  after: { type: Schema.Types.Mixed },
+  ipAddress: { type: String },
+  occurredAt: { type: Date, required: true }
+}, { timestamps: true });
+AdminAuditLogSchema.index({ adminId: 1 });
+AdminAuditLogSchema.index({ entityType: 1, entityId: 1 });
+AdminAuditLogSchema.index({ occurredAt: 1 });
+const AdminAuditLog = mongoose.model('AdminAuditLog', AdminAuditLogSchema);
+
+module.exports = { User, Restaurant, Cart, Order, Payment, Delivery, Review, PlatformConfig, AdminAuditLog };

@@ -364,7 +364,12 @@ For arrays use "[Type]" (e.g. "[String]"). For an embedded subdocument use type 
 - Mark required/unique fields; use enums for fixed value sets; choose money/precision \
 types deliberately.
 - created_at/updated_at are handled by Mongoose timestamps — do NOT add them manually.
-- Add indexes for common lookups and uniqueness constraints.
+- Add indexes for common lookups and uniqueness constraints. An index entry may set:
+  "unique"/"sparse" (booleans), "expireAfterSeconds" (TTL), a "type" for the whole
+  index ("2dsphere" for GeoJSON location fields, "text", "hashed"), and either a list
+  of field paths OR an object mapping each path to 1/-1/"2dsphere"/"text" for full
+  control. GeoJSON point fields ({type:"Point", coordinates:[lng,lat]}) MUST get a
+  "2dsphere" index to support geo queries; ephemeral collections can use a TTL index.
 
 Respond with STRICT JSON only, no prose, no markdown fences:
 {{
@@ -600,10 +605,51 @@ def _render_field(f: dict, indent: int) -> str:
     if f.get("enum"):
         opts.append("enum: " + json.dumps(f["enum"]))
     if f.get("default") not in (None, ""):
-        d = f["default"]
-        opts.append("default: " + (json.dumps(d) if isinstance(d, str) else str(d)))
+        # json.dumps yields valid JS literals for str/bool/number/null
+        # (true/false/0/"x"), unlike str() which emits Python's True/False.
+        opts.append("default: " + json.dumps(f["default"]))
     spec = "{ " + ", ".join(opts) + " }"
     return f"{pad}{f['name']}: " + (f"[{spec}]" if is_array else spec)
+
+
+def _idx_key(k: str) -> str:
+    """Quote an index key if it isn't a bare JS identifier (dotted paths, etc.)."""
+    return k if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", k) else f"'{k}'"
+
+
+def _index_key_spec(idx: dict) -> str:
+    """Render the index key object. Supports:
+      - fields as a list  -> ascending, or the index `type` applied to each
+        (e.g. a single 2dsphere/text/hashed field);
+      - fields as an object {field: 1 | -1 | "2dsphere" | "text"} for full control.
+    """
+    fields = idx.get("fields", [])
+    itype = idx.get("type")
+    pairs: list[tuple[str, object]] = []
+    if isinstance(fields, dict):
+        pairs = list(fields.items())
+    else:
+        for k in fields:
+            pairs.append((k, itype if itype else 1))
+    parts = []
+    for k, v in pairs:
+        val = f"'{v}'" if isinstance(v, str) else str(v)
+        parts.append(f"{_idx_key(k)}: {val}")
+    return "{ " + ", ".join(parts) + " }"
+
+
+def _index_options(idx: dict) -> str:
+    """Render the index options object (unique/sparse/expireAfterSeconds/name)."""
+    opts: list[str] = []
+    if idx.get("unique"):
+        opts.append("unique: true")
+    if idx.get("sparse"):
+        opts.append("sparse: true")
+    if idx.get("expireAfterSeconds") is not None:
+        opts.append(f"expireAfterSeconds: {int(idx['expireAfterSeconds'])}")
+    if idx.get("name"):
+        opts.append("name: " + json.dumps(idx["name"]))
+    return (", { " + ", ".join(opts) + " }") if opts else ""
 
 
 def render_mongoose(schema: dict) -> str:
@@ -618,9 +664,7 @@ def render_mongoose(schema: dict) -> str:
         fields = ",\n".join(_render_field(f, 1) for f in coll.get("fields", []))
         out.append(f"const {model}Schema = new Schema({{\n{fields}\n}}, {{ timestamps: true }});")
         for idx in coll.get("indexes", []):
-            spec = "{ " + ", ".join(f"{c}: 1" for c in idx.get("fields", [])) + " }"
-            opts = ", { unique: true }" if idx.get("unique") else ""
-            out.append(f"{model}Schema.index({spec}{opts});")
+            out.append(f"{model}Schema.index({_index_key_spec(idx)}{_index_options(idx)});")
         out.append(f"const {model} = mongoose.model('{model}', {model}Schema);")
         out.append("")
     out.append("module.exports = { " + ", ".join(models) + " };")
@@ -655,6 +699,22 @@ def validate_schema(schema: dict, inputs: dict) -> list[str]:
     def norm(s: str) -> str:
         return re.sub(r"[^a-z]", "", s.lower())
 
+    def covered(e: str, name: str) -> bool:
+        """Does normalized entity `e` plausibly map to normalized `name`?
+        Handles simple + y->ies pluralization (delivery/deliveries, category/
+        categories) so real collections aren't flagged as missing."""
+        if e == name or e in name or name in e:
+            return True
+        if e + "s" == name or name + "s" == e:
+            return True
+        if e.rstrip("s") == name or name.rstrip("s") == e:
+            return True
+        if e.endswith("y") and e[:-1] + "ies" == name:
+            return True
+        if name.endswith("y") and name[:-1] + "ies" == e:
+            return True
+        return False
+
     if "collections" in schema:            # document / Mongoose
         colls = schema.get("collections", [])
         names = {c["name"] for c in colls}
@@ -678,8 +738,7 @@ def validate_schema(schema: dict, inputs: dict) -> list[str]:
         coll_norms = {norm(n) for n in names}
         for ent in entities:
             e = norm(ent)
-            if not any(e in cn or cn in e or e + "s" == cn or cn.rstrip("s") == e
-                       for cn in coll_norms):
+            if not any(covered(e, cn) for cn in coll_norms):
                 warnings.append(f"entity '{ent}' has no obvious collection")
         return warnings
 
@@ -709,7 +768,7 @@ def validate_schema(schema: dict, inputs: dict) -> list[str]:
     table_norms = {norm(n) for n in names}
     for ent in entities:
         e = norm(ent)
-        if not any(e in tn or tn in e or e + "s" == tn or tn.rstrip("s") == e for tn in table_norms):
+        if not any(covered(e, tn) for tn in table_norms):
             warnings.append(f"entity '{ent}' has no obvious table")
     return warnings
 

@@ -8,6 +8,7 @@ backend project layout:
     extracted_requirements.json   (tech stack + functional/non-functional needs)
     user_features.json            (features -> module boundaries)
     db_schema.json                (entities/collections/tables + datastore family)
+    routes.json                   (OPTIONAL — frontend routes, for FE/BE alignment)
         ->  backend-structure.json        (nested folder tree, per handoff item #14)
             backend_structure_decision.md (approaches compared + chosen + why)
 
@@ -75,6 +76,7 @@ MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS") or "8000")
 IN_REQUIREMENTS = "extracted_requirements.json"
 IN_FEATURES = "user_features.json"
 IN_SCHEMA = "db_schema.json"
+IN_ROUTES = "routes.json"                    # frontend routes (optional, from FE initializer)
 
 OUT_JSON = "backend-structure.json"
 OUT_DECISION = "backend_structure_decision.md"
@@ -106,7 +108,38 @@ def load_inputs(shared: Path) -> dict:
         "extracted_requirements": read(IN_REQUIREMENTS),
         "user_features": read(IN_FEATURES),
         "db_schema": read(IN_SCHEMA),
+        # Optional frontend artifact — used to align backend endpoints with the
+        # frontend's routes when available; absent is fine.
+        "routes": read(IN_ROUTES, required=False),
     }
+
+
+def _extract_routes(routes) -> list:
+    """Compact list of frontend routes, tolerant of shape.
+    Accepts: a list of route objects/strings, a dict with a 'routes' list, or a
+    path->meta mapping. Returns a small list the prompt can use to align backend
+    endpoints with what the frontend actually navigates to."""
+    if not routes:
+        return []
+    items = []
+    if isinstance(routes, list):
+        items = routes
+    elif isinstance(routes, dict):
+        if isinstance(routes.get("routes"), list):
+            items = routes["routes"]
+        else:                                   # treat as path -> meta mapping
+            items = [{"path": k, **(v if isinstance(v, dict) else {})}
+                     for k, v in routes.items()]
+    out = []
+    for r in items:
+        if isinstance(r, str):
+            out.append({"path": r})
+        elif isinstance(r, dict):
+            keep = {k: r[k] for k in ("path", "name", "component", "role", "roles",
+                                      "method", "access", "protected") if k in r}
+            if keep:
+                out.append(keep)
+    return out
 
 
 def distill(inputs: dict) -> dict:
@@ -133,6 +166,8 @@ def distill(inputs: dict) -> dict:
         "datastore": schema.get("datastore"),
         "datastore_product": schema.get("datastore_product"),
         "data_objects": data_objects,
+        # Frontend alignment (empty when routes.json isn't present yet)
+        "frontend_routes": _extract_routes(inputs.get("routes")),
     }
 
 
@@ -212,6 +247,11 @@ document store; native client wrappers otherwise.
 - Include folders for the features/modules implied by the inputs, plus the \
 cross-cutting concerns the app needs (config, middleware, auth, validation, error \
 handling, tests) — only those that make sense for this app.
+- If `frontend_routes` are present in the inputs, align the backend to them: the \
+backend's feature modules and API surface should serve the data those routes need. \
+Treat them as alignment hints, not literal folders to copy — do NOT create backend \
+folders named after individual UI pages. If they are empty/absent, ignore them and \
+shape the backend from the features and data model alone.
 - Do NOT invent product features beyond those implied by the inputs.
 
 Output the layout as a NESTED JSON TREE under "tree": a directory maps to an \
