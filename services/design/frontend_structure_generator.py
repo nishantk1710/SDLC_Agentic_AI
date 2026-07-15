@@ -9,12 +9,20 @@ Azure AI Foundry.
 INPUTS  (all read from $SHARED_DIR):
     - extracted_requirements.json
     - user_features.json
+    - backend-structure.json     (the backend layout — the API + data surface
+                                   the frontend must integrate against)
     - routes.json                (the Route List from the earlier node)
 
 OUTPUT (written to $SHARED_DIR):
     - frontend-structure.json    (E4  Project Structure — frontend)
       A nested object describing the folder tree; leaf values are short
       descriptions of what each folder/file holds.
+
+Why backend-structure.json is an input:
+    Generating the frontend against the backend's real module/endpoint/model
+    surface keeps the two sides in sync — every service the frontend defines
+    should correspond to something the backend actually exposes, and type
+    definitions should mirror backend models, rather than being invented.
 
 Two ways to run:
     1. As a node in an agentic flow:
@@ -62,6 +70,7 @@ MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS") or "8000")
 INPUT_FILES = {
     "requirements": "extracted_requirements.json",
     "user_features": "user_features.json",
+    "backend_structure": "backend-structure.json",
     "routes": "routes.json",
 }
 OUTPUT_FILES = {
@@ -191,7 +200,7 @@ class FrontendStructureAgent:
     # -- Input loading ------------------------------------------------------ #
     def _load_inputs(self, state: Optional[dict] = None) -> dict[str, Any]:
         """
-        Load the three input docs. If a graph passed them in `state`, reuse
+        Load the four input docs. If a graph passed them in `state`, reuse
         those; otherwise read them from SHARED_DIR.
         """
         state = state or {}
@@ -205,12 +214,29 @@ class FrontendStructureAgent:
 
     # -- Artifact generator ------------------------------------------------- #
     def generate_structure(self, inputs: dict[str, Any]) -> dict:
-        """Frontend project structure (E4) from requirements, features, and routes."""
+        """
+        Frontend project structure (E4) from requirements, features, the
+        backend structure, and the route list.
+        """
         system = (
             "You are a senior frontend architect. Produce the agreed frontend "
             "PROJECT/FOLDER STRUCTURE that all generated frontend code must follow. "
             "Base the layout on the technology and constraints in the requirements, "
-            "the pages implied by the route list, and the user features.\n\n"
+            "the pages implied by the route list, the user features, and — critically "
+            "— the BACKEND STRUCTURE, which defines the real API and data surface the "
+            "frontend must integrate against.\n\n"
+            "Use the backend structure as the source of truth for the integration "
+            "boundary:\n"
+            "- Every API-client/service module you place under services/ (or similar) "
+            "MUST correspond to a real backend module/endpoint group. Do not invent "
+            "services for endpoints the backend does not expose.\n"
+            "- Type/model definitions on the frontend should mirror the backend's "
+            "models (names and fields), so the two stay in sync.\n"
+            "- Real-time or integration features (e.g. sockets, payment, mapping) "
+            "should only appear if the backend actually provides them.\n"
+            "- If a requirement or route seems to need something the backend does not "
+            "expose, prefer the backend surface; do not fabricate a client for a "
+            "non-existent endpoint.\n\n"
             "Rules:\n"
             "- Return ONLY a single JSON object representing a nested folder tree.\n"
             "- A folder is an object whose keys end with '/'. Its value is either a "
@@ -218,8 +244,8 @@ class FrontendStructureAgent:
             "- A file is a key WITHOUT a trailing '/', with a short string description "
             "as its value.\n"
             "- Include the standard frontend directories (e.g. components, pages, "
-            "services, hooks, utils, types) plus any folders the routes/features clearly "
-            "require. Keep it realistic and not over-engineered.\n"
+            "services, hooks, utils, types) plus any folders the routes/features/backend "
+            "clearly require. Keep it realistic and not over-engineered.\n"
             "- Do NOT include prose, comments, markdown, or code fences — JSON only."
         )
         user = self._build_full_context(inputs)
@@ -232,6 +258,8 @@ class FrontendStructureAgent:
             f"{json.dumps(inputs['requirements'], indent=2, ensure_ascii=False)}\n\n"
             "=== user_features.json ===\n"
             f"{json.dumps(inputs['user_features'], indent=2, ensure_ascii=False)}\n\n"
+            "=== backend-structure.json (API + data surface to integrate against) ===\n"
+            f"{json.dumps(inputs['backend_structure'], indent=2, ensure_ascii=False)}\n\n"
             "=== routes.json (Route List) ===\n"
             f"{json.dumps(inputs['routes'], indent=2, ensure_ascii=False)}"
         )

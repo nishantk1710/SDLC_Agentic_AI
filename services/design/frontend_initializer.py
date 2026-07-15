@@ -7,8 +7,9 @@ frontend deliverables using the Anthropic LLM.
 
 INPUTS  (all read from $SHARED_DIR):
     - extracted_requirements.json
-    - glossary.json
     - user_features.json
+    - glossary.json
+    - db_schema.json
 
 OUTPUTS (all written to $SHARED_DIR):
     - routes.json            (B2  Route List)      page name -> path (params included)
@@ -17,9 +18,12 @@ OUTPUTS (all written to $SHARED_DIR):
 
 Derivation rules:
     - tokens.json           <- extracted_requirements.json (ui token source / ui tokens)
-    - routes.json           <- all three docs (functional, non-functional, business
-                               rules, constraints, external interfaces, user features)
-    - state_transitions.md  <- all three docs (same sources as routes)
+                               (DB schema is intentionally NOT used here — design tokens
+                                are a styling concern, unrelated to the data model.)
+    - routes.json           <- all four docs (functional, non-functional, business
+                               rules, constraints, external interfaces, user features,
+                               and the DB schema's entities/relationships)
+    - state_transitions.md  <- all four docs (same sources as routes)
 
 Two ways to run:
     1. As a node in an agentic flow:
@@ -67,8 +71,9 @@ MAX_TOKENS = int(os.getenv("ANTHROPIC_MAX_TOKENS") or "8000")
 # Input / output filenames
 INPUT_FILES = {
     "requirements": "extracted_requirements.json",
-    "glossary": "glossary.json",
     "user_features": "user_features.json",
+    "glossary": "glossary.json",
+    "db_schema": "db_schema.json",
 }
 OUTPUT_FILES = {
     "routes": "routes.json",
@@ -217,7 +222,7 @@ class FrontendSpecAgent:
     # -- Input loading ------------------------------------------------------ #
     def _load_inputs(self, state: Optional[dict] = None) -> dict[str, Any]:
         """
-        Load the three input docs. If a graph passed them in `state`, reuse
+        Load the four input docs. If a graph passed them in `state`, reuse
         those; otherwise read them from SHARED_DIR.
         """
         state = state or {}
@@ -231,7 +236,13 @@ class FrontendSpecAgent:
 
     # -- Artifact generators ----------------------------------------------- #
     def generate_tokens(self, requirements: Any) -> dict:
-        """Design Tokens (C6) from extracted_requirements only."""
+        """
+        Design Tokens (C6) from extracted_requirements only.
+
+        The DB schema is deliberately excluded: tokens describe visual styling
+        (color/spacing/radius/typography) and have no relationship to the data
+        model, so including the schema would only dilute the prompt.
+        """
         system = (
             "You are a senior design-systems engineer. From the product's UI "
             "token source in the extracted requirements, produce a COMPLETE design "
@@ -249,28 +260,32 @@ class FrontendSpecAgent:
         return self._complete_json(system, user)
 
     def generate_routes(self, inputs: dict[str, Any]) -> dict:
-        """Route List (B2) from all three docs."""
+        """Route List (B2) from all four docs."""
         system = (
             "You are a frontend architect. Derive the complete frontend route map "
             "for the application. Consider functional and non-functional requirements, "
-            "business rules, constraints, external interfaces, and user features. "
-            "Output every page the app needs and its path, including path params "
-            "(e.g. '/products/:id'). Keys are human-readable page names, values are "
-            "route paths. Return ONLY a flat JSON object mapping page name -> path. "
-            "No prose, no code fences."
+            "business rules, constraints, external interfaces, user features, and the "
+            "DB schema (its entities and relationships strongly imply the list/detail "
+            "pages the UI needs — e.g. an Order entity implies order list and order "
+            "detail routes). Output every page the app needs and its path, including "
+            "path params (e.g. '/products/:id'). Keys are human-readable page names, "
+            "values are route paths. Return ONLY a flat JSON object mapping page name "
+            "-> path. No prose, no code fences."
         )
         user = self._build_full_context(inputs)
         return self._complete_json(system, user)
 
     def generate_state_transitions(self, inputs: dict[str, Any]) -> str:
-        """State Transitions (B3) from all three docs — Markdown output."""
+        """State Transitions (B3) from all four docs — Markdown output."""
         system = (
             "You are a frontend architect writing an implementation spec. For EACH "
             "frontend page, document the WITHIN-PAGE UI states so a developer never "
             "has to guess: Loading, Empty, Error, and Success. These are per-page UI "
             "states, NOT page-to-page navigation. Base pages and states on the "
             "functional/non-functional requirements, business rules, constraints, "
-            "external interfaces, and user features.\n\n"
+            "external interfaces, user features, and the DB schema (use entities and "
+            "their relationships to decide which pages are data-backed and therefore "
+            "need Loading/Empty/Error states).\n\n"
             "Return Markdown only. Use this shape per page:\n\n"
             "<Page Name>:\n"
             "- Loading → <what shows>\n"
@@ -288,10 +303,12 @@ class FrontendSpecAgent:
         return (
             "=== extracted_requirements.json ===\n"
             f"{json.dumps(inputs['requirements'], indent=2, ensure_ascii=False)}\n\n"
+            "=== user_features.json ===\n"
+            f"{json.dumps(inputs['user_features'], indent=2, ensure_ascii=False)}\n\n"
             "=== glossary.json ===\n"
             f"{json.dumps(inputs['glossary'], indent=2, ensure_ascii=False)}\n\n"
-            "=== user_features.json ===\n"
-            f"{json.dumps(inputs['user_features'], indent=2, ensure_ascii=False)}"
+            "=== db_schema.json ===\n"
+            f"{json.dumps(inputs['db_schema'], indent=2, ensure_ascii=False)}"
         )
 
     # -- Orchestration ------------------------------------------------------ #

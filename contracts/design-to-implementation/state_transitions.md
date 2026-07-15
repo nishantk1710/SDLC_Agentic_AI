@@ -1,173 +1,247 @@
-Registration Page:
-- Loading → Full-page warm canvas (color-canvas) with top nav bar visible; form skeleton shows shimmer placeholders for email/mobile field, password field, and submit button; no interaction possible during initial config fetch (e.g. supported regions, terms URL).
-- Empty → Blank registration form rendered with email/mobile input, password input, confirm-password input, and a "Create Account" primary button (color-primary); all fields show placeholder text in color-muted; no error or helper text shown; "Already have an account? Sign in" secondary link visible.
-- Error → Inline validation messages rendered directly beneath the offending field(s) in color-error using font-small; specific cases: invalid email/mobile format, password too weak, passwords don't match, email/mobile already registered, rate-limit lockout banner at top of form; "Create Account" button remains enabled so the user can correct and retry; network/server failure shows a non-blocking toast or inline banner ("Something went wrong — please try again") without clearing field values.
-- Success → Form replaced by a confirmation panel: icon (envelope or phone), heading ("Check your inbox / messages"), body text instructing the user to verify their email or mobile before they can place orders; a "Resend verification" link is available; no navigation away is forced so the user can switch context freely.
+# Customer Application Pages
 
-Email / Mobile Verification Page:
-- Loading → Spinner centered on canvas while the system validates the token from the verification link; brief "Verifying your account…" label in color-muted below the spinner.
-- Empty → Not applicable — page is only reached via a verification link; if no token is present in the URL, immediately transition to the Error state.
-- Error → Full-page message with color-error icon and heading ("Verification link invalid or expired"); body text explains the link is single-use and time-limited; prominent "Resend verification link" button (color-primary); secondary "Go to Sign In" text link.
-- Success → Confirmation panel with color-success icon, heading ("Email / mobile verified"), and message ("Your account is ready — you can now place orders"); single primary CTA button "Start Ordering" that navigates to the Restaurant Listing page.
+Registration Page:
+- Loading → Full-page spinner overlaid on the form while the registration request is in flight; submit button disabled and shows "Creating account…" label
+- Empty   → N/A (form always renders with blank fields; no pre-existing data required)
+- Error   → Inline validation messages in color-error beneath each offending field (e.g. "Email already in use," "Password too short"); a top-of-form banner in color-error if the server returns a non-field-specific error (e.g. rate limit hit); submit button re-enabled
+- Success → Form replaced by a confirmation panel: icon + "Check your email / phone" heading, brief instruction to click the verification link, and a resend link
+
+Email / Phone Verification Page:
+- Loading → Spinner while the token is being validated on mount (token read from URL query param and sent to API automatically)
+- Empty   → N/A (token is always present in URL or the page shows the Error state)
+- Error   → Centered card with color-error icon; message distinguishes "Link expired" from "Link already used" from "Invalid link"; primary CTA button "Resend verification" triggers a new token
+- Success → Centered card with color-success checkmark; "Your account is verified" heading; auto-redirect to Login after 3 seconds with a manual link as fallback
 
 Login Page:
-- Loading → Form skeleton with shimmer placeholders for credential fields and button; shown only if session state is being checked on mount to avoid flashing the form for already-authenticated users.
-- Empty → Clean form with email/mobile field, password field, "Sign In" primary button, "Forgot password?" text link, and "Create an account" secondary link; all inputs empty with color-muted placeholders; no error states shown.
-- Error → Inline error beneath the relevant field for invalid format; a dismissible alert banner below the form heading for authentication failures ("Incorrect email or password"); account-locked state replaces the button with a disabled state and displays a banner in color-warning indicating the lockout duration and that the account is temporarily locked after five consecutive failures; network error shows a top-of-form banner without clearing credentials.
-- Success → Login form is hidden; a brief full-screen loading indicator appears while the session token is stored and the user is redirected to their role-appropriate landing page (Customer → Restaurant Listing; Restaurant Manager → Order Queue; Delivery Agent → Job Queue; Administrator → Admin Dashboard).
+- Loading → Submit button disabled and labeled "Signing in…"; form fields read-only; inline spinner beside button
+- Empty   → N/A (form always renders empty; no data fetch required)
+- Error   → Inline color-error message below the password field for bad credentials; distinct locked-account banner (color-warning) showing "Account locked — try again in X minutes" when `lockedUntil` is active; rate-limit error shown as top-of-form banner
+- Success → Session token stored; user redirected to their role-appropriate home page (Restaurant Listing for customers)
 
 Forgot Password Page:
-- Loading → Shimmer placeholder for the email/mobile input field and submit button during any initial state check.
-- Empty → Single-field form asking for the verified email or mobile number associated with the account; "Send Reset Link" primary button; "Back to Sign In" text link; no errors or helper text.
-- Error → Inline error beneath the field for invalid format; a form-level banner for unrecognised email/mobile ("If this address is registered, you'll receive a link shortly" — deliberately ambiguous per security best practice, but rendered using color-warning rather than color-error to signal non-blocking feedback); network failure shows a retry banner without clearing the field.
-- Success → Form replaced by a confirmation panel ("Reset link sent"); body text instructs the user to check their email or messages; the link is time-limited and single-use (per REQ-5); "Resend" link and "Back to Sign In" text link provided.
+- Loading → Submit button disabled and labeled "Sending…" while the reset-link request is in flight
+- Empty   → N/A (single input form, always rendered)
+- Error   → Inline color-error message below the email/phone field (e.g. "No account found for this address"); top-of-form banner for rate-limit errors
+- Success → Input replaced by confirmation panel: "Reset link sent" heading, instruction to check email/SMS, note that the link expires in N minutes
 
 Reset Password Page:
-- Loading → Spinner while the reset token in the URL is validated server-side before rendering the form.
-- Empty → Not applicable — page is only reachable via a reset link; missing token transitions immediately to Error state.
-- Error → Token invalid or expired: full-page error panel with color-error icon, explanatory message, and "Request a new reset link" primary button. Form-level validation errors (password too weak, passwords don't match): inline messages beneath each field in color-error; submit button remains enabled.
-- Success → Form replaced by a confirmation panel with color-success icon ("Password updated"); single primary CTA "Sign In" navigating to the Login page; no automatic redirect to prevent session confusion.
+- Loading → Spinner while token validity is checked on mount
+- Empty   → N/A
+- Error   → Full-panel color-error message if token is invalid or expired, with a "Request new link" CTA; inline field-level errors (e.g. "Passwords do not match") during form submission
+- Success → "Password updated" confirmation card with color-success icon; auto-redirect to Login after 3 seconds
 
-Restaurant Listing / Home Page (Customer):
-- Loading → Top nav bar and address selector rendered immediately; below, a grid or list of restaurant card skeletons (shimmer rectangles matching card dimensions) fills the viewport; filter/sort bar shown in a disabled shimmer state; results are returned within 2 seconds for 95% of requests (NFR-1).
-- Empty → Address selector and filter/sort bar fully interactive; zero-results illustration with friendly icon, heading ("No restaurants available"), and contextual body text — either "No restaurants deliver to this address right now" (address outside all delivery radii or all restaurants closed, per BR-3/BR-4) or "No results match your filters" (when filters are active, with a "Clear filters" action link in color-primary).
-- Error → Address selector remains usable; restaurant grid area shows an error panel with a retry button ("Try again") in color-primary; specific sub-states: mapping/geocoding failure shows a color-warning inline banner ("We couldn't confirm your address — results may be incomplete") without blocking the list if partial data is available (NFR-17); full API failure shows the error panel.
-- Success → Fully rendered list/grid of restaurant cards each showing: food photography hero image, restaurant name (font-h3), cuisine tags (color-secondary badges), average star rating, estimated delivery time, delivery fee, and minimum order value (REQ-11); "Closed" or "Unavailable" pill overlay on cards for non-deliverable restaurants (REQ-12); filter/sort bar active with cuisine, price range, minimum rating, and estimated delivery time controls (REQ-10); search input active (REQ-9); selected delivery address displayed prominently with a change-address affordance.
+Restaurant Listing / Home Page:
+- Loading → Address bar and search bar rendered; below them a grid of skeleton cards (logo placeholder, shimmer lines for name, rating, delivery time) matching the expected result density
+- Empty   → Illustrated empty-state graphic; heading "No restaurants available"; body copy "We couldn't find any open restaurants delivering to your address right now — try a different address or check back later"; address-edit CTA
+- Error   → Error card with color-error icon; "Couldn't load restaurants" heading; short message (network issue, service unavailable); "Try again" retry button; if the Mapping API failed specifically, a banner "Location services unavailable — delivery radius may not apply"
+- Success → Search bar, active filter chips (cuisine, price range, min rating, delivery time), sort controls; responsive grid of restaurant cards each showing logo/banner thumbnail, name, cuisine tags, avg rating (star + number), estimated delivery time, delivery fee, minimum order value, and an "Unavailable" overlay badge when `isOpen` is false or outside operating hours
 
-Restaurant Detail / Menu Page (Customer):
-- Loading → Restaurant hero image area renders as a large shimmer block; below it, restaurant meta row (rating, ETA, fee, minimum) shows shimmer placeholders; menu category tabs and item list show skeleton rows; add-to-cart button in the sticky footer is hidden until data loads.
-- Empty → Only reachable if the restaurant exists but has no menu categories or items configured; shows the restaurant header fully rendered and a body message ("Menu coming soon — check back later") with no item cards; the cart footer is absent; a back-navigation affordance is present.
-- Error → Restaurant header renders if cached data allows; menu area shows an error panel with a retry button; if the restaurant is marked closed or outside operating hours (BR-3), a full-width color-warning banner replaces the CTA footer: "This restaurant is currently closed — you can browse the menu but cannot add items."
-- Success → Full restaurant header: hero image, name (font-h1), cuisine, open/closed badge, average rating, estimated delivery time, delivery fee, minimum order value, and operating hours (REQ-11); horizontally scrollable category tab bar anchoring to menu sections; each menu item card shows name, description, price, allergen/dietary badges (NFR-5), and an "Add" button (color-primary, 44 × 44 px min); unavailable items show a "Unavailable" label and a disabled "Add" button (REQ-12); sticky cart summary footer appears as soon as ≥1 item is in the cart showing item count and subtotal with a "View Cart" CTA.
+Restaurant Detail / Menu Page:
+- Loading → Hero banner skeleton; restaurant meta row skeleton (name, rating, delivery fee, ETA chips); below, category tab bar skeleton and a list of item card skeletons with shimmer
+- Empty   → Restaurant header renders normally; below it an empty-state message "This restaurant hasn't added any menu items yet" (only plausible during onboarding edge case)
+- Error   → Restaurant header area shows a color-error banner "Couldn't load menu — please try again"; retry button; rest of page blank
+- Success → Sticky hero banner with restaurant photo; meta row showing avg rating, delivery fee, estimated delivery minutes, minimum order value, cuisine types, open/closed status badge; sticky horizontal category tab bar auto-generated from `menuCategories`; each category section lists item cards with photo, name, description, price, allergen/dietary tags (from `allergens` and `tags` fields), and an "Unavailable" chip + disabled add-button when `isAvailable` is false; floating cart summary bar at bottom when cart has items
 
-Cart Page (Customer):
-- Loading → Sticky header with restaurant name shown immediately; cart item list area shows shimmer skeleton rows for items; price summary panel (subtotal, taxes, delivery fee, total) shows shimmer placeholders; checkout button disabled.
-- Empty → Illustration with icon, heading ("Your cart is empty"), body text ("Add items from a restaurant to get started"); single "Browse Restaurants" primary button; no price summary or checkout button shown.
-- Error → Cart items remain displayed using last-known state; error banner at the top of the page for any sync failure ("We couldn't update your cart — please try again"); if an item has become unavailable since it was added, that item is highlighted with a color-error inline label ("No longer available — please remove to continue") and the checkout button is disabled until removed (REQ-12); cross-restaurant conflict (BR-2) shown as an inline warning if data integrity is violated.
-- Success → List of cart items each showing name, customisation summary, per-item price, quantity stepper (−/+ controls, 44 × 44 px), and remove icon; price summary panel showing subtotal, taxes, delivery fee, and total recalculated live (REQ-15); delivery/pickup selector (REQ-17); saved-address selector for delivery (REQ-6/REQ-17); if subtotal is below the restaurant's minimum order value, checkout button is disabled and an inline message shows the shortfall amount in color-error ("Add [amount] more to reach the minimum order", REQ-16); "Proceed to Checkout" primary button (color-primary) enabled only when all validations pass; order cancellation note ("You can cancel free of charge before the restaurant accepts your order", BR-1).
+Cart Page:
+- Loading → Skeleton rows for each cart item plus skeleton totals block while the cart document is fetched; checkout button disabled
+- Empty   → Centered illustration of an empty bowl; "Your cart is empty" heading; "Browse restaurants" CTA button routing back to Restaurant Listing
+- Error   → Top-of-page color-error banner "Couldn't load your cart"; retry button; if a specific item has become unavailable since it was added, an inline color-warning chip on that item row reading "No longer available — remove to continue"
+- Success → Restaurant name header with a "Clear cart" link; scrollable list of item rows (thumbnail, name, unit price, quantity stepper, line total, remove icon, optional special instructions); totals block showing subtotal, delivery fee, tax, and total recalculated live on every quantity change; minimum-order shortfall banner in color-warning when subtotal < `minimumOrderValue`; fulfillment toggle (Delivery / Pickup); saved-address selector dropdown when Delivery is chosen; disabled "Proceed to Checkout" button with tooltip when minimum order not met, enabled otherwise
 
-Checkout / Payment Page (Customer):
-- Loading → Page structure (address summary, payment method selector, order summary panel) renders with shimmer skeletons while payment gateway widget and saved addresses are fetched; "Place Order" button is disabled.
-- Empty → Not a reachable independent empty state; if the user lands here with an empty cart they are redirected to the Cart page.
-- Error → Payment gateway failure: inline color-error banner below the payment widget ("Payment could not be processed — please check your details or try another method") with the form kept intact for retry; order placement timeout: dismissible error banner at top of page; address outside delivery radius: color-error inline message next to the address selector ("This address is outside the delivery area", BR-4); all errors are non-destructive — no entered data is cleared; PCI-compliant gateway widget handles card-specific validation errors inline within the widget itself (REQ-21).
-- Success → Payment authorised and order created (REQ-22): page transitions to an Order Confirmation panel showing order ID, itemised summary, estimated delivery time, and payment method/amount recorded (REQ-23); a prominent "Track My Order" CTA in color-primary; a "Continue Shopping" secondary link; no sensitive card data is displayed.
+Checkout Page:
+- Loading → Skeleton for delivery address confirmation, order summary, and payment method selector while saved addresses and cart snapshot are fetched; place-order button disabled
+- Empty   → If no saved address exists and fulfillment is Delivery, inline prompt card "Add a delivery address to continue" with an "Add address" inline form or modal
+- Error   → Payment gateway failure renders a color-error banner "Payment failed — [gateway reason]" with a "Try a different method" CTA and keeps the order in unpaid state; address-out-of-radius error shows inline color-error below address selector; general API error shows top-of-page banner with retry
+- Success → Two-column layout (mobile: stacked): left — confirmed delivery address with edit link, fulfillment type, special instructions field; right — order summary (item list, subtotal, delivery fee, tax, total); payment method selector (card via gateway iframe/hosted fields, digital wallet, COD if `allowsCashOnDelivery`); primary "Place Order" button (color-primary, 44 × 44 px minimum); processing spinner on button after tap
 
-Order Confirmation Page (Customer):
-- Loading → Spinner/skeleton while the newly created order record is fetched to confirm persistence (REQ-23, NFR-7); order ID shown immediately from the prior response if available.
-- Empty → Not applicable — page is only rendered post-successful order placement.
-- Error → If order record cannot be confirmed (e.g. network drop after placement), a color-warning banner states "Your order may have been placed — check your Order History or contact support" alongside order details captured client-side; a "View Order History" link and support contact are offered; avoids falsely implying failure since payment may have been captured.
-- Success → Color-success icon and heading ("Order placed!"); order reference number; itemised order summary; selected delivery address or pickup note; payment method and amount; estimated delivery time; status chip "Pending Restaurant Acceptance" (REQ-18/REQ-27); "Track My Order" primary CTA; "Cancel Order" secondary action available (color-error text link) with a note that cancellation is free only before restaurant acceptance (BR-1/REQ-19).
+Order Confirmation Page:
+- Loading → Spinner with "Confirming your order…" while the order-creation and payment-authorization round trip completes (target ≤ 3 s per NFR-2)
+- Empty   → N/A (page is always navigated to with a freshly created order)
+- Error   → Full-page error state with order reference if partially created: color-error icon, "Something went wrong" heading, explanation ("Payment could not be confirmed"), suggested action ("Check your order history or contact support"), order number if available
+- Success → color-success checkmark animation; "Order placed!" heading; order number prominently displayed; estimated delivery time; summary of items and total; "Track Order" primary CTA; "Continue Browsing" secondary link
 
-Order Tracking Page (Customer):
-- Loading → Map area renders as a placeholder tile while the mapping API initialises; status stepper and ETA panel show shimmer skeletons; delivery agent location indicator absent until data arrives; WebSocket connection initiated in background.
-- Empty → Not applicable as a standalone state; if the order ID is invalid or does not belong to the authenticated user, transitions directly to Error.
-- Error → Mapping API failure: map area replaced by a color-warning banner ("Live map unavailable — tracking may be limited", NFR-17); status stepper and ETA text remain functional from WebSocket data; full WebSocket disconnection: color-warning top banner "Reconnecting…" with automatic retry; order data shown from last known state with a "last updated" timestamp.
-- Success → Status progress stepper showing the full sequence (Accepted → Preparing → Ready → Out for Delivery → Delivered, REQ-27) with current step highlighted in color-primary and completed steps in color-success; while "Out for Delivery": live map with delivery agent pin updating within 5 seconds of agent location report (REQ-28, NFR-4), updated ETA displayed prominently; order summary panel (items, restaurant name, delivery address); "Cancel Order" action visible and enabled only in "Pending Restaurant Acceptance" state (BR-1/REQ-19), shown as disabled with explanatory tooltip after acceptance; on reaching "Delivered" status: color-success banner and "Rate Your Order" CTA appearing inline (REQ-31).
+Order Tracking Page:
+- Loading → Status stepper skeleton; map area skeleton (grey rectangle); ETA chip skeleton; order summary skeleton below
+- Empty   → N/A (page always opened from a specific order reference)
+- Error   → If order fetch fails: color-error banner "Couldn't load order details" with retry; if Mapping API unavailable: map area replaced by color-warning banner "Live map unavailable — status updates will still appear"; order status stepper still renders from order document
+- Success → Horizontal or vertical status stepper showing the sequence Accepted → Preparing → Ready → Out for Delivery → Delivered with current step highlighted in color-primary and completed steps in color-success; live map panel with agent location pin and route polyline while status is "Out for Delivery" (updated ≤ 5 s per NFR-4); ETA chip updated in real time; order items summary; agent name and vehicle info when assigned; "Cancel Order" button visible and enabled only while status is "pendingRestaurantAcceptance" (per BR-1); cancellation-charge warning modal shown if cancellation attempted after acceptance
 
-Order History Page (Customer):
-- Loading → List skeleton showing shimmer rows for past orders; filter/search bar rendered but inactive.
-- Empty → Illustration with heading ("No orders yet") and body text ("Your completed and active orders will appear here"); "Browse Restaurants" primary CTA.
-- Error → Error panel with retry button ("Couldn't load your orders — try again"); if partial data is cached, show available orders with a color-warning banner noting that the list may be incomplete.
-- Success → Chronological list of past orders each showing: restaurant name and logo, order date, status chip (color-success for Delivered, color-error for Cancelled, color-warning for in-progress), item summary, and total amount; tapping/clicking an order navigates to Order Detail or Order Tracking if still active; a "Reorder" shortcut button on delivered orders; "Rate" CTA on delivered unreviewed orders (REQ-31); pagination or infinite scroll for long histories.
+Order History Page:
+- Loading → List of skeleton order-summary cards with shimmer (order number, date, restaurant name, total, status chip)
+- Empty   → Centered illustration; "No orders yet" heading; "Start browsing" CTA button
+- Error   → color-error banner "Couldn't load your orders"; retry button
+- Success → Chronologically sorted list of order cards each showing order number, restaurant name snapshot, date, item count, total, and a color-coded status chip; "Reorder" quick-action button; "Leave a Review" CTA on delivered orders without a review; tapping a card navigates to Order Detail
 
-Order Detail Page (Customer):
-- Loading → Order header (restaurant name, order ID, date) shows immediately from list data; full item breakdown, payment details, and timeline shimmer until detail fetch completes.
-- Empty → Not applicable — only rendered for an existing order record.
-- Error → Partial render with cached list-level data; error panel in the detail body with retry; if the order cannot be loaded at all, full-page error with "Back to Order History" link.
-- Success → Full itemised breakdown with quantities and prices; delivery address or pickup label; payment status, method, and amount (REQ-23); order status timeline showing status history with timestamps; proof-of-delivery photo thumbnail if attached (REQ-29); "Rate this order" section if delivered and not yet reviewed (REQ-31); "Dispute / Contact Support" link visible for delivered or cancelled orders.
+Order Detail Page:
+- Loading → Skeleton for order meta header, item list, totals, payment info, and status history timeline
+- Empty   → N/A
+- Error   → color-error banner with retry
+- Success → Order number, placed-at timestamp, restaurant name; item list with quantities and line totals; pricing breakdown (subtotal, delivery fee, tax, total); payment method and status; fulfillment type and delivery address; status history timeline; refund details if applicable; "Rate this Order" CTA when status is "delivered" and `reviewId` is null
 
-Submit Review Page (Customer):
-- Loading → Restaurant name and order summary shown immediately; star-rating widget and text area shimmer briefly while confirming the order is eligible (delivered, not yet reviewed).
-- Empty → Star-rating widget (1–5 stars, all unselected, REQ-31); optional text review textarea with placeholder ("Share your experience…"); "Submit Review" primary button disabled until a star rating is selected; "Skip" text link.
-- Error → If the order has already been reviewed (BR-6), the form is replaced by an informational panel ("You've already reviewed this order") with a link back to Order History; network submission error shows a color-error banner beneath the form without clearing the rating or text; star rating remains interactive for correction.
-- Success → Color-success confirmation panel ("Review submitted — thank you!"); note that the restaurant's rating has been updated (REQ-32); "Back to Orders" primary CTA; review text and star rating displayed read-only as confirmation.
+Leave a Review Page:
+- Loading → Skeleton star-rating row and text area while order eligibility is verified
+- Empty   → N/A
+- Error   → If order is not eligible (not delivered, or review already submitted): full-panel informational message "Review not available" with explanation; if submission fails: inline color-error banner with retry
+- Success → Restaurant name and order reference shown as context; 1–5 star tap-to-select rating widget (color-secondary for filled stars); optional text area for comment; character count indicator; "Submit Review" primary button; confirmation toast "Review submitted" on success; CTA to return to Order History
 
-Saved Addresses Page (Customer — within Account/Profile):
-- Loading → List of address cards shimmers while fetching; "Add New Address" button rendered immediately.
-- Empty → Illustration with heading ("No saved addresses"), body text ("Add an address to speed up checkout"); single "Add Address" primary CTA.
-- Error → Error panel with retry for list fetch failure; inline color-error messages beneath individual address form fields for validation failures (invalid postcode, unresolvable address per mapping API); save-failure toast without closing the form.
-- Success → List of saved address cards each showing formatted address, a default badge (color-secondary pill) if applicable, "Edit" and "Delete" icon buttons (44 × 44 px); "Add New Address" button at top or bottom; inline edit/add form expands within the page (or via a bottom sheet on mobile) with geocoding validation on blur; delete triggers a confirmation dialog before removal (REQ-6).
+Customer Profile / Account Page:
+- Loading → Skeleton avatar circle, skeleton name line, skeleton for each section (saved addresses, notification preferences)
+- Empty   → Saved addresses sub-section shows "No saved addresses" with an "Add address" CTA when `savedAddresses` array is empty
+- Error   → color-error banner "Couldn't load your profile" with retry
+- Success → Avatar (or initials fallback), full name, email/phone; editable full-name and avatar-upload fields; Saved Addresses section listing each address with label, full address string, default badge, edit and delete controls, and "Add new address" button; Change Password section; notification preferences toggles; Logout button
 
-Restaurant Partner — Order Queue Page:
-- Loading → Top nav bar and restaurant open/closed toggle rendered immediately; incoming order list shows shimmer skeleton cards; WebSocket connection initialising in background.
-- Empty → Order list area shows a friendly illustration with heading ("No active orders") and body text ("New orders will appear here automatically"); open/closed toggle remains interactive.
-- Error → WebSocket disconnection: color-warning banner "Connection lost — reconnecting…" at top of page with auto-retry; order cards last received remain visible with a "last updated" timestamp; if the restaurant's session has expired, a modal prompts re-authentication without losing order state.
-- Success → Real-time list of incoming and active orders sorted by arrival time; each order card shows: order ID, customer name, items summary, total value, time received, and current status chip; new orders arrive with an audio alert and a visual highlight animation (REQ-36); each card has action buttons: "Accept" (color-success) and "Reject" (color-error) for pending orders; "Mark Preparing" and "Mark Ready" for accepted orders (REQ-37); rejecting an order opens an inline reason-entry field before confirmation (REQ-38); order cards transition status in real time via WebSocket.
+Saved Address Add / Edit Modal (within Profile Page):
+- Loading → Modal opens with a spinner while geocoding API resolves coordinates for a pasted address on save
+- Empty   → Blank form fields when adding a new address
+- Error   → Inline color-error messages for required fields; color-warning banner if geocoding fails ("Address could not be verified — please check and retry")
+- Success → Modal closes; updated address list reflects the change immediately; success toast "Address saved"
 
-Restaurant Partner — Menu Management Page:
-- Loading → Category list and item grid/list show shimmer skeletons; "Add Category" and "Add Item" buttons rendered but disabled until data loads.
-- Empty → No menu categories exist yet: full-page empty state with heading ("Your menu is empty") and "Add your first category" primary CTA guiding the manager through the creation flow.
-- Error → Category or item save failure: inline color-error banner within the open edit form without closing it, preserving entered data; list fetch failure: error panel with retry; image upload failure: inline error beneath the image upload control ("Image could not be uploaded — try again").
-- Success → Accordion or tab list of menu categories; each category shows its name, item count, and expand/collapse control; within each category, item rows showing: item photo thumbnail, name (font-h3), description (font-small, truncated), price, availability toggle (REQ-35), and edit/delete icon buttons; inline edit form opens within the page or a side panel for adding/editing categories and items including name, description, price, allergen/dietary fields (NFR-5), and availability toggle (REQ-34); restaurant-level open/closed toggle in the page header (REQ-35); unsaved changes prompt a confirmation dialog on navigation away.
+---
 
-Restaurant Partner — Restaurant Settings Page:
-- Loading → Settings form shimmers while current configuration is fetched.
-- Empty → Not applicable — settings always have persisted values for an onboarded restaurant.
-- Error → Inline color-error messages for invalid field values; save-failure banner at top of form without clearing data; if the manager lacks permission for a specific field, that field is rendered as read-only with a tooltip explaining the restriction.
-- Success → Editable form with restaurant name, cuisine type(s), operating hours, delivery radius (read reference to platform default, per constraint), minimum order value, COD availability toggle, and contact details; "Save Changes" primary button; changes to open/closed status and per-item availability are reflected immediately to customers upon save (REQ-35).
+# Restaurant Partner Portal Pages
 
-Delivery Agent — Job Queue / Available Jobs Page:
-- Loading → Single-tap-optimised layout renders immediately; job card area shows a minimal shimmer (single card placeholder) to avoid distraction; geolocation permission is requested on mount if not already granted.
-- Empty → Full-screen friendly panel ("No jobs available right now — stay close and we'll notify you of the next one"); agent availability toggle remains accessible.
-- Error → Geolocation unavailable: color-warning banner "Location access required for job assignment — please enable location in your browser settings"; WebSocket disconnection: minimal top banner "Reconnecting…" (NFR-6, single-tap interactions preserved); network error: retry button displayed prominently in large tap target.
-- Success → Pending job card displayed one at a time (highest priority / proximity); card shows restaurant name, pickup address, drop-off area, estimated distance, and estimated payout; two large single-tap buttons: "Accept" (color-success) and "Decline" (color-error) each ≥ 44 × 44 px (REQ-26, NFR-6); a countdown timer shows the time remaining to respond before automatic reassignment (REQ-26); agent availability toggle (online/offline) accessible in the header at all times.
+Restaurant Manager Login Page:
+- Loading → Submit button disabled, labeled "Signing in…"
+- Empty   → Blank credential form
+- Error   → Inline color-error for bad credentials; locked-account banner in color-warning
+- Success → Redirect to Restaurant Dashboard
 
-Delivery Agent — Active Delivery Page:
-- Loading → Map initialises as a tile placeholder; pickup and drop-off address details shown immediately from accepted job data (already in client state); status action button shimmers briefly.
-- Empty → Not applicable — only rendered when an active delivery exists.
-- Error → Map failure: color-warning banner "Map unavailable" with text directions fallback showing address and any available route description (NFR-17); location reporting failure: silent retry in background, no interruption to the agent workflow (NFR-6).
-- Success → Full-screen or large-format map showing current agent position, restaurant pin, and customer pin; turn-by-turn or route polyline overlay from Mapping API; current job details panel (restaurant name, pickup address, customer drop-off address, order items summary) collapsible to maximise map visibility; single large-tap status progression button that advances through: "Picked Up" → "Out for Delivery" → "Mark Delivered" (REQ-29, NFR-6); "Mark Delivered" action opens a minimal confirmation sheet with an optional camera capture for proof-of-delivery photograph (REQ-29, browser camera API per tech stack); after marking delivered, page transitions to Job Queue.
+Restaurant Dashboard Page:
+- Loading → Skeleton stat tiles (today's orders, revenue, avg rating); skeleton incoming-order queue
+- Empty   → Stat tiles show zeroes; incoming-order queue shows "No pending orders" empty state with a waving-hand illustration
+- Error   → color-error banner "Couldn't load dashboard data"; retry; WebSocket disconnection shown as a persistent color-warning top banner "Live order updates paused — reconnecting…"
+- Success → Summary stat tiles (orders today, revenue today, avg rating, open/closed toggle); real-time incoming-order queue with per-order card showing order number, customer name, item count, total, and Accept / Reject action buttons; active orders section showing orders in Accepted / Preparing / Ready states with advance-status CTA per card; restaurant open/closed toggle prominent in top bar
 
-Delivery Agent — Delivery History Page:
-- Loading → Shimmer list skeleton while past deliveries are fetched.
-- Empty → Heading ("No deliveries yet") with body text ("Completed deliveries will appear here").
-- Error → Error panel with retry; partial cached data shown with color-warning banner noting the list may be incomplete.
-- Success → Chronological list of completed deliveries showing: order ID, restaurant name, delivery address (area-level for privacy), completion time, and status chip ("Delivered" in color-success); total earnings summary card at top showing period totals; tapping a row opens a minimal detail view with proof-of-delivery photo if attached.
+Incoming Order Detail Modal (within Dashboard):
+- Loading → Spinner while full order details are fetched after clicking an order card
+- Empty   → N/A
+- Error   → color-error banner inside modal with retry
+- Success → Full item list with quantities and special instructions; customer delivery address; order total; Accept (color-success) and Reject (color-error) primary action buttons; rejection requires a reason text field (REQ-38) before confirming; timer countdown showing acceptance window remaining
 
-Admin — Dashboard Page:
-- Loading → KPI summary cards shimmer; activity feed shows skeleton rows; all nav links remain active.
-- Empty → Not applicable for a live platform; if the platform is freshly initialised with zero data, KPI cards show "0" values with an onboarding prompt to add the first restaurant partner.
-- Error → Individual widget failure: each KPI card or chart renders its own inline error state with a retry icon, so a single failing data source does not blank the whole dashboard (NFR-17); session expiry: full-page re-authentication prompt.
-- Success → KPI summary cards: total orders today, revenue today, active deliveries, and open disputes; trend charts (orders over time, revenue over time); live activity feed of recent orders and status changes; quick-action links to Manage Restaurants, Manage Agents, Review Disputes, and Platform Settings; all administrative actions logged automatically (NFR-11).
+Order Management Page (Active & Past Orders):
+- Loading → Skeleton order rows in a table/list
+- Empty   → "No orders found" with date-range filter hint
+- Error   → color-error banner with retry
+- Success → Filterable, sortable table of orders with columns: order number, placed time, customer name, items summary, total, current status chip, action button (Advance to Preparing / Ready where applicable); date-range and status filters; search by order number
 
-Admin — Manage Restaurants Page:
-- Loading → Search bar and filter controls rendered immediately; restaurant table/list shows shimmer rows.
-- Empty → Zero results from search/filter: inline message ("No restaurants match your search — try different criteria") with "Clear filters" link; zero restaurants on platform: empty state with "Onboard First Restaurant" primary CTA.
-- Error → Table load failure: error panel with retry; individual row action failure (e.g. suspend action fails): inline color-error toast for that row without affecting the rest of the list.
-- Success → Searchable, filterable table of all restaurant partners showing: name, cuisine, city, status chip (Active / Suspended), date onboarded, and action buttons "View", "Suspend", "Reactivate" (REQ-39); clicking a row opens the Restaurant Detail panel showing full profile, commission rate, operating history, and a direct link to their menu; "Onboard New Restaurant" primary CTA; all actions logged (NFR-11).
+Menu Management Page:
+- Loading → Skeleton category accordions with skeleton item rows inside
+- Empty   → "No menu categories yet" empty state with "Add category" primary CTA (shown when `menuCategories` is empty)
+- Error   → color-error banner "Couldn't load menu" with retry
+- Success → List of collapsible category sections each showing category name, availability toggle, sort-order handle, edit and delete controls, and a nested list of item cards; each item card shows thumbnail, name, price, availability toggle, allergen tags, edit and delete icons; "Add category" and "Add item to category" CTAs; inline edit forms expand in-place on edit action; unsaved-changes confirmation dialog on navigation away
 
-Admin — Restaurant Detail / Onboarding Page:
-- Loading → Restaurant header (name, status) shown from list data; full detail sections shimmer.
-- Empty → Onboarding form in blank state (all fields empty) when creating a new restaurant; form is guided with clear labels, required-field markers, and inline hints.
-- Error → Inline color-error validation messages per field; save failure banner at top of form; if the geocoding API fails to validate the restaurant address, a color-warning inline note ("Address could not be verified — please check") allows saving with manual override for admin.
-- Success → Full restaurant profile form: name, cuisine, address (geocoded), operating hours, delivery radius, minimum order value, commission rate override (REQ-42), COD permission, contact details, and status toggle (Active / Suspended); "Save" and "Cancel" actions; status history timeline at the bottom; all saves logged with actor and timestamp (NFR-11).
+Menu Item Add / Edit Form (inline or modal within Menu Management):
+- Loading → Spinner on save while the updated restaurant document is persisted and the response returns
+- Empty   → Blank fields when adding a new item
+- Error   → Inline color-error for required fields (name, price); color-error banner for API save failure
+- Success → Form collapses / modal closes; item appears or is updated in the category list immediately; success toast "Item saved"
 
-Admin — Manage Delivery Agents Page:
-- Loading → Search bar rendered immediately; agent table shimmers.
-- Empty → No agents match search: inline "No results" message with "Clear filters"; no agents on platform: empty state with "Onboard First Agent" CTA.
-- Error → Table load failure with retry; individual action failure shown as an inline color-error toast per row.
-- Success → Searchable table of all delivery agents showing: name, contact, current status chip (Online/Offline/Suspended), total deliveries, and action buttons "View", "Suspend", "Reactivate" (REQ-39); agent detail panel/page accessible from each row showing profile, delivery history, and current active job if any; "Onboard New Agent" primary CTA; all actions logged (NFR-11).
+Restaurant Settings Page:
+- Loading → Skeleton for restaurant profile fields, operating-hours table, and delivery settings
+- Empty   → N/A (settings are always pre-populated from the restaurant document)
+- Error   → color-error banner "Couldn't load settings" with retry; inline save errors appear near the relevant section
+- Success → Editable fields: restaurant name, description, cuisine types, logo/banner upload, delivery fee, minimum order value, estimated delivery minutes, delivery radius, cash-on-delivery toggle, operating-hours table (days × open/close times); save button per section or a global save; success toast on save
 
-Admin — Orders & Transactions Page:
-- Loading → Search and filter controls rendered immediately; orders table shimmers; date-range picker available.
-- Empty → No orders match current filters: inline "No orders found" message with "Clear filters" link; no orders on platform yet: empty state illustration with explanatory copy.
-- Error → Table load failure with retry button; export action failure: color-error toast without affecting the visible table.
-- Success → Searchable, filterable table of all orders across the platform showing: order ID, customer name, restaurant name, agent name, status chip, payment method, amount, and timestamp (REQ-40); clicking a row expands or navigates to a full order detail view including payment reference and gateway transaction ID (REQ-23); filter controls: date range, status, payment method, restaurant; export to CSV action; refund action accessible from order detail for eligible orders (REQ-24/BR-7), requiring admin confirmation before execution.
+---
 
-Admin — Disputes Page:
-- Loading → Dispute queue shows shimmer rows; filter controls rendered immediately.
-- Empty → No open disputes: color-success banner ("All disputes resolved") with an option to view closed disputes.
-- Error → Load failure: error panel with retry; resolution-save failure: color-error banner within the open dispute panel without closing it, preserving the admin's entered notes.
-- Success → List of disputes showing: dispute ID, customer name, order ID, reason summary, date opened, and status chip (Open / In Review / Resolved); clicking a dispute opens a detail panel with: full order summary, customer's dispute description, payment details, and a resolution form with free-text notes, resolution type selector (refund / no action / partial refund), and "Apply Resolution" primary button (REQ-41); refund issuance triggers confirmation dialog reminding the admin that the action is irreversible and will call the gateway (REQ-24/BR-7); resolved disputes show the resolution summary read-only; all resolutions logged with actor and timestamp (NFR-11).
+# Delivery Agent App Pages
 
-Admin — Platform Settings Page:
-- Loading → Settings form shimmers while current configuration values are fetched.
-- Empty → Not applicable — platform settings always have default values post-initialisation.
-- Error → Inline color-error messages for out-of-range or invalid field values (e.g. commission rate > 100%); save failure banner at top of form without clearing data; field-level permission restriction shown as read-only with tooltip for any fields outside the admin's specific sub-role if sub-roles are configured.
-- Success → Editable configuration form with: platform commission rate, service fee structure, default delivery radius, order cancellation window, session token duration, account lockout duration and threshold (REQ-4), and rate-limiting parameters; each field includes a descriptive hint and valid range note; "Save Changes" primary button triggers a confirmation dialog ("These changes will affect all active operations — confirm?") before persisting (REQ-42); change history log displayed at the bottom showing previous values, changed-by actor, and timestamp (NFR-11).
+Agent Login Page:
+- Loading → Submit button disabled, labeled "Signing in…"
+- Empty   → Blank credential form
+- Error   → Inline color-error for bad credentials; locked-account banner
+- Success → Redirect to Agent Home / Job Queue
 
-Admin — Manage Users Page:
-- Loading → Search bar rendered immediately; user table shimmers.
-- Empty → No users match search: inline "No results" message with "Clear filters"; not applicable as a platform-wide empty since at least the admin account exists.
-- Error → Load failure with retry; individual action failure (e.g. suspend fails) shown as an inline color-error toast for that row.
-- Success → Searchable table of all users (customers, managers, agents) showing: name, email/mobile, role chip, account status (Active / Locked / Suspended), and registration date (REQ-40); clicking a row opens a user detail panel showing profile data, order/review history link, and status management actions; administrators can view but not expose raw credentials (NFR-9); all status-change actions logged with actor and timestamp (NFR-11).
+Agent Home / Job Queue Page:
+- Loading → Skeleton for availability toggle and offered-job card
+- Empty   → Availability toggle shown; "No jobs available right now" message when `agentProfile.isAvailable` is true but no delivery has been offered
+- Error   → color-error banner "Couldn't connect to dispatch"; WebSocket reconnection banner
+- Success → Prominent availability toggle (Online / Offline) at top; when a job is offered: full-screen modal-style job card showing restaurant name, pickup address, drop-off address, estimated distance, time limit countdown (offer expiry per `offerExpiresAt`); single-tap Accept (color-success) and Decline (color-error) buttons (≥ 44 × 44 px, minimal interaction per NFR-6)
+
+Active Delivery Page:
+- Loading → Spinner while delivery details are fetched after accepting a job
+- Empty   → N/A (only reached after accepting a job)
+- Error   → color-error banner "Couldn't load delivery details" with retry; if location permission denied, color-warning banner "Location access needed to update your position — tap to enable"
+- Success → Map showing agent's current position, restaurant pin (pickup), and customer pin (drop-off); order summary (items count, order number, restaurant name, customer address); large single-tap status-advance button ("Picked Up" → "Delivered") per NFR-6; camera capture button for optional proof-of-delivery photo (active only at "Delivered" step); ETA to next waypoint; all controls thumb-reachable at bottom of screen
+
+Agent Order History Page:
+- Loading → Skeleton list of past delivery cards
+- Empty   → "No completed deliveries yet"
+- Error   → color-error banner with retry
+- Success → List of completed deliveries with order number, restaurant name, customer address, delivered-at timestamp, and earnings per trip
+
+Agent Profile Page:
+- Loading → Skeleton for profile fields
+- Empty   → N/A
+- Error   → color-error banner with retry
+- Success → Full name, vehicle type, licence plate (editable); availability toggle; browser location-permission status indicator; change-password section; logout button
+
+---
+
+# Admin Console Pages
+
+Admin Login Page:
+- Loading → Submit button disabled, labeled "Signing in…"
+- Empty   → Blank credential form
+- Error   → Inline color-error for bad credentials; locked-account banner; rate-limit warning
+- Success → Redirect to Admin Dashboard
+
+Admin Dashboard Page:
+- Loading → Skeleton KPI tiles and skeleton recent-activity feed
+- Empty   → KPI tiles show zeroes on a brand-new installation; activity feed shows "No recent activity"
+- Error   → color-error banner "Couldn't load dashboard"; retry
+- Success → KPI tiles (total orders today, revenue today, active restaurants, active agents, open disputes); recent orders feed; quick-nav cards to each major admin section; system-health indicators for external integrations (Payment Gateway, Mapping API, Messaging Provider) showing up/degraded/down
+
+Restaurant Management Page:
+- Loading → Skeleton table rows while restaurant list is fetched
+- Empty   → "No restaurants found" for the active filter set; "Onboard your first restaurant" CTA when the platform has no restaurants at all
+- Error   → color-error banner with retry
+- Success → Searchable, filterable table of restaurants (name, cuisine, status chip, avg rating, onboarded date, manager email); status filter (active / suspended / pending); per-row actions: View, Suspend, Reactivate; "Onboard New Restaurant" primary CTA button; bulk-action checkboxes for suspend/reactivate
+
+Restaurant Onboarding / Edit Form Page:
+- Loading → Spinner while existing restaurant data loads (edit mode) or blank (create mode)
+- Empty   → All fields blank in create mode
+- Error   → Inline color-error per required field; top-of-form banner for API errors (e.g. slug conflict)
+- Success → Form with all restaurant fields (name, slug, address with geocoding, cuisine types, delivery fee, min order value, delivery radius, commission rate, manager account assignment); save creates/updates the restaurant document and triggers a success toast; admin redirected back to Restaurant Management list
+
+User Management Page:
+- Loading → Skeleton table rows
+- Empty   → "No users found" for the active search/filter
+- Error   → color-error banner with retry
+- Success → Searchable table of users filterable by role and status; columns: full name, email/phone, role chip, status chip, created date; per-row actions: View, Suspend, Reactivate; row click navigates to User Detail
+
+User Detail Page:
+- Loading → Skeleton for profile header and linked-entity sections
+- Empty   → N/A
+- Error   → color-error banner with retry
+- Success → User profile (name, email/phone, role, status, verified badge, created date); for agents: vehicle info and availability status; for managers: linked restaurant with link to Restaurant Detail; order count with link to filtered Order Management; Suspend / Reactivate / Reset Password action buttons; confirmation dialogs for destructive actions
+
+Order Management (Admin) Page:
+- Loading → Skeleton table rows
+- Empty   → "No orders match the current filters"
+- Error   → color-error banner with retry
+- Success → Searchable, filterable (by status, date range, restaurant, customer) table of all platform orders; columns: order number, customer, restaurant, total, payment status, order status chip, placed-at timestamp; row click navigates to Admin Order Detail
+
+Admin Order Detail Page:
+- Loading → Skeleton for order data, payment block, delivery block, and dispute block
+- Empty   → N/A
+- Error   → color-error banner with retry
+- Success → Full order data mirroring customer Order Detail plus: payment record (method, gateway ref, status, refund history); delivery record (agent name, status, proof-of-delivery photo thumbnail); status history timeline; dispute / resolution section; admin action buttons: Issue Refund (full or partial), Cancel Order, with confirmation modals and required reason text fields; all actions written to adminAuditLogs
+
+Disputes Page:
+- Loading → Skeleton dispute card list
+- Empty   → "No open disputes" with a color-success checkmark illustration
+- Error   → color-error banner with retry
+- Success → List of orders flagged as disputed, each card showing order number, customer name, dispute description, current order/payment status, and date raised; per-card CTA "Review Dispute" navigating to Admin Order Detail; filter tabs: Open / Resolved / All
+
+Platform Configuration Page:
+- Loading → Skeleton key-value rows while `platformConfigs` collection is fetched
+- Empty   → "No configuration keys found" (should not occur in a seeded installation; shown as a safeguard)
+- Error   → color-error banner "Couldn't load configuration" with retry; inline save error banner if a specific key update fails
+- Success → Table of editable configuration parameters (key, current value, description, last-updated-by, last-updated-at); inline edit input per row with a Save button; confirmation dialog for high-impact parameters (e.g. commission rate, delivery radius); success toast on save; all saves logged to adminAuditLogs
+
+Audit Log Page:
+- Loading → Skeleton table rows
+- Empty   → "No audit log entries found" for the active filter
+- Error   → color-error banner with retry
+- Success → Append-only table of administrative actions; columns: timestamp, admin name, action type, entity type, entity ID (linked to relevant detail page); search by admin, entity type, date range; read-only (no edit or delete controls); export to CSV button
