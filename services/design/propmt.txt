@@ -1,42 +1,49 @@
-## 5. API Contract (Backend) + Sample Payloads
-
-**Satisfies:** D2 (API Specification), D5 (Sample Payloads)
-
-**Format:** OpenAPI YAML — `openapi.yaml`, with real example payloads embedded as `examples:` (or a companion `sample-payloads.json`).
-
-**Contains:** every endpoint (method, path, params, typed request/response), error shapes, auth per endpoint, and realistic sample request/response bodies to build and test against.
-
-```yaml
-
-paths:
-
-  /products/{id}:
-
-    get:
-
-      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
-
-      responses:
-
-        '200':
-
-          content:
-
-            application/json:
-
-              schema: { $ref: '#/components/schemas/Product' }
-
-              example: { id: "123", name: "Wireless Mouse", price: 799.00, inStock: true }
-
-
-
-
-
-
-4 · Contract	API Contract Generator	Extracted Req, DB Schema, BE Structure	API Contract (OpenAPI) + sample payloads
-
-
-
-
-
-now create the api contract creator agent with similar thinking approach
+(venv) PS C:\Projects\SDLC\services\design> python .\api_contract_generator.py      
+2026-07-15 11:21:47,796 [INFO] api_contract_generator: Deliberating on API-design approaches (model=claude-sonnet-4-6)...
+2026-07-15 11:22:37,511 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:22:37,529 [INFO] api_contract_generator: Chosen approach: Hybrid REST + Action Sub-Resources
+2026-07-15 11:22:37,529 [INFO] api_contract_generator: Generating API contract...
+2026-07-15 11:24:44,643 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:24:44,850 [INFO] api_contract_generator: Contract too large for one response — switching to batched generation.
+2026-07-15 11:26:49,845 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:26:49,983 [INFO] api_contract_generator: Skeleton truncated; retrying at a larger budget...
+2026-07-15 11:29:08,319 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:29:08,826 [INFO] api_contract_generator:   generating 7 endpoint(s) for tag 'auth'...
+2026-07-15 11:29:39,809 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:29:39,809 [INFO] api_contract_generator:   generating 11 endpoint(s) for tag 'users'...
+2026-07-15 11:30:41,865 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:30:42,067 [INFO] api_contract_generator:   generating 9 endpoint(s) for tag 'restaurants'...
+2026-07-15 11:31:58,862 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:31:59,063 [INFO] api_contract_generator:   generating 8 endpoint(s) for tag 'menus'...
+2026-07-15 11:32:55,564 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:32:55,618 [INFO] api_contract_generator:   generating 5 endpoint(s) for tag 'carts'...
+2026-07-15 11:33:30,734 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:33:30,735 [INFO] api_contract_generator:   generating 10 endpoint(s) for tag 'orders'...
+2026-07-15 11:34:58,051 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:34:58,295 [INFO] api_contract_generator:   generating 3 endpoint(s) for tag 'payments'...
+2026-07-15 11:35:35,879 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:35:35,879 [INFO] api_contract_generator:   generating 6 endpoint(s) for tag 'deliveries'...
+2026-07-15 11:36:31,357 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:36:31,576 [INFO] api_contract_generator:   generating 4 endpoint(s) for tag 'reviews'...
+2026-07-15 11:37:04,679 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:37:04,679 [INFO] api_contract_generator:   generating 4 endpoint(s) for tag 'disputes'...
+2026-07-15 11:37:42,394 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:37:42,396 [INFO] api_contract_generator:   generating 2 endpoint(s) for tag 'platform-config'...
+2026-07-15 11:37:59,058 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:37:59,074 [INFO] api_contract_generator:   generating 2 endpoint(s) for tag 'audit-logs'...
+2026-07-15 11:38:30,758 [INFO] httpx: HTTP Request: POST https://opaura-msdfas24zq-amidctus2.services.ai.azure.com/anthropic/v1/messages "HTTP/1.1 200 OK"
+2026-07-15 11:38:30,759 [INFO] api_contract_generator: Contract generated: 71 endpoints, 1 component schemas
+Traceback (most recent call last):
+  File "C:\Projects\SDLC\services\design\api_contract_generator.py", line 868, in <module>
+    main()
+  File "C:\Projects\SDLC\services\design\api_contract_generator.py", line 848, in main
+    result = run(shared_dir=args.dir)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Projects\SDLC\services\design\api_contract_generator.py", line 823, in run
+    result["warnings"] = validate_contract(result["contract"], result["facts"])
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Projects\SDLC\services\design\api_contract_generator.py", line 742, in validate_contract
+    for ref in ([ep.get("request", {}).get("schema_ref")] +
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+(venv) PS C:\Projects\SDLC\services\design> 

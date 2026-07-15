@@ -75,6 +75,27 @@ MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS") or "8000")
 # HTTP timeout on a slow endpoint; if the contract needs more, truncation trips
 # the batched fallback (smaller, faster calls) rather than a giant slow request.
 CONTRACT_MAX_TOKENS = int(os.environ.get("API_CONTRACT_MAX_TOKENS") or "12000")
+# The skeleton (all component schemas + a terse endpoint index, NO examples) is
+# the one inherently large batched call. Give it a generous budget so it finishes
+# in ONE call instead of truncating and retrying — a truncated attempt is pure
+# wasted time and tokens. A cap is only a ceiling; you pay for tokens generated,
+# so sizing it high is cost-neutral and just avoids the retry.
+SKELETON_MAX_TOKENS = int(os.environ.get("API_CONTRACT_SKELETON_MAX_TOKENS") or "48000")
+# Per-tag endpoint calls are independent, so they can run concurrently. This is
+# the biggest wall-clock win on a slow endpoint. Set to 1 to go sequential if the
+# endpoint rate-limits. Does NOT change cost (same calls/tokens), only latency.
+TAG_CONCURRENCY = max(1, int(os.environ.get("API_CONTRACT_TAG_CONCURRENCY") or "4"))
+# Cap how many endpoints one per-call request must detail. A tag with many
+# endpoints (e.g. 18) can overflow CONTRACT_MAX_TOKENS in a single call and
+# truncate; chunking keeps every call comfortably within budget (and, since
+# chunks are independent, increases parallelism). If a chunk still truncates it
+# is split in half automatically, so generation always converges.
+ENDPOINTS_PER_CALL = max(1, int(os.environ.get("API_CONTRACT_ENDPOINTS_PER_CALL") or "8"))
+# The single-shot attempt almost always truncates for a real-sized API (wasting a
+# ~2-minute call before the batched path takes over), so it's OFF by default: we
+# go straight to batched. Set API_CONTRACT_SINGLE_SHOT=1 to try one-shot first
+# (worthwhile only for very small APIs that fit in a single response).
+SINGLE_SHOT = (os.environ.get("API_CONTRACT_SINGLE_SHOT") or "0") not in ("0", "false", "False")
 # A large generation can take minutes; the SDK default (600s) is fine, but make
 # it explicit and configurable. max_retries=1: a timed-out big request should
 # fall back to batched calls, not silently re-bill 2-3 full generations.
@@ -203,6 +224,30 @@ def _resource_fields(schema: dict) -> dict:
     return out
 
 
+def _role_enum_values(schema: dict) -> list:
+    """Collect enum values from any field/column named 'role' (or 'roles') across
+    the schema, whatever the datastore shape. These are the machine role values
+    the API's per-endpoint 'roles' will use."""
+    vals: set = set()
+
+    def scan_fields(fields):
+        for f in fields or []:
+            nm = str(f.get("name", "")).lower()
+            if nm in ("role", "roles") and isinstance(f.get("enum"), list):
+                vals.update(f["enum"])
+            if f.get("fields"):
+                scan_fields(f["fields"])
+
+    for c in schema.get("collections", []) or []:
+        scan_fields(c.get("fields"))
+    for t in schema.get("tables", []) or []:
+        for col in t.get("columns", []) or []:
+            nm = str(col.get("name", "")).lower()
+            if nm in ("role", "roles") and isinstance(col.get("enum"), list):
+                vals.update(col["enum"])
+    return sorted(vals)
+
+
 def distill(inputs: dict) -> dict:
     """Pull just what shapes an API contract, keeping the prompt focused."""
     er = inputs["extracted_requirements"] or {}
@@ -217,6 +262,11 @@ def distill(inputs: dict) -> dict:
         "external_interfaces": er.get("external_interfaces", []),
         "tech_stack": er.get("tech_stack", []),
         "roles": [r.get("role") for r in uf.get("roles", [])],
+        # The machine role values the schema actually declares (e.g. a User.role
+        # enum). The contract's per-endpoint roles use THESE, so the validator must
+        # accept them too — the user_features labels ("Platform Administrator") and
+        # the schema enum ("platformAdmin") are different spellings of the same role.
+        "role_values": _role_enum_values(schema),
         "features": [{"name": f.get("name"), "description": f.get("description")}
                      for f in uf.get("features", [])],
         "resources": _resource_names(schema),
@@ -462,16 +512,23 @@ def _facts_and_choice(facts: dict, decision: dict) -> str:
 
 
 def _design_batched(facts: dict, decision: dict) -> dict:
-    """Fallback for large APIs: skeleton (schemas + endpoint index) then per-tag detail."""
-    logger.info("Contract too large for one response — switching to batched generation.")
+    """Large-API path: one skeleton call (all schemas + a terse endpoint index),
+    then per-tag endpoint detail. Per-tag calls run concurrently (independent),
+    which is the main wall-clock win on a slow endpoint."""
+    logger.info("Generating contract via batched path (skeleton + per-tag)...")
     skel_prompt = _facts_and_choice(facts, decision) + "Produce the skeleton."
     try:
-        skeleton = _call_json(GENERATE_SKELETON_SYSTEM, skel_prompt, max_tokens=CONTRACT_MAX_TOKENS)
+        # Generous skeleton budget so it completes in ONE call (no truncate+retry).
+        skeleton = _call_json(GENERATE_SKELETON_SYSTEM, skel_prompt, max_tokens=SKELETON_MAX_TOKENS)
     except TruncatedResponse:
-        # Skeleton itself was too big — retry once with the model's max ceiling.
-        logger.info("Skeleton truncated; retrying at a larger budget...")
+        # Safety net only — should be rare now that the budget is sized up front.
+        logger.info("Skeleton truncated; retrying at the max budget...")
         skeleton = _call_json(GENERATE_SKELETON_SYSTEM, skel_prompt, max_tokens=64000)
     index = skeleton.pop("endpoint_index", [])
+    # Normalise the component block up front: if the model returned the canonical
+    # {"schemas": {...}} nesting, unwrap it so the per-tag calls below are told the
+    # REAL schema names (User, Order, ...) rather than the single key "schemas".
+    skeleton["components"] = _normalize_components(skeleton.get("components"))
     schema_names = sorted(skeleton.get("components", {}).keys())
     # group endpoints by tag, preserving first-seen order
     by_tag: dict[str, list] = {}
@@ -487,17 +544,54 @@ def _design_batched(facts: dict, decision: dict) -> dict:
         "resource_fields": facts.get("resource_fields", {}),
     }, indent=2, ensure_ascii=False) + "\n```\n")
 
-    all_eps: list = []
-    for tag, eps in by_tag.items():
-        logger.info("  generating %d endpoint(s) for tag '%s'...", len(eps), tag)
+    def _gen_chunk(tag: str, eps: list) -> list:
+        """Detail one chunk of a tag's endpoints. Resilient to truncation: if the
+        response is cut off, split the chunk in half and retry each half (a single
+        endpoint that still won't fit is retried once at a larger budget). This
+        guarantees the run completes instead of aborting and losing all work."""
         payload = {"tag": tag, "available_schema_names": schema_names, "endpoints": eps}
-        result = _call_json(
-            GENERATE_ENDPOINTS_SYSTEM,
-            compact_ctx
-            + "Endpoints to detail (for this tag only):\n```json\n"
-            + json.dumps(payload, indent=2, ensure_ascii=False) + "\n```",
-            max_tokens=CONTRACT_MAX_TOKENS)
-        all_eps.extend(result.get("endpoints", []))
+        prompt = (compact_ctx
+                  + "Endpoints to detail (for this tag only):\n```json\n"
+                  + json.dumps(payload, indent=2, ensure_ascii=False) + "\n```")
+        try:
+            return _call_json(GENERATE_ENDPOINTS_SYSTEM, prompt,
+                              max_tokens=CONTRACT_MAX_TOKENS).get("endpoints", [])
+        except TruncatedResponse:
+            if len(eps) > 1:
+                mid = len(eps) // 2
+                logger.info("  chunk of %d for '%s' truncated; splitting into %d + %d",
+                            len(eps), tag, mid, len(eps) - mid)
+                return _gen_chunk(tag, eps[:mid]) + _gen_chunk(tag, eps[mid:])
+            # a single endpoint that still overflowed — one retry at a bigger budget
+            logger.info("  single endpoint for '%s' truncated; retrying larger", tag)
+            return _call_json(GENERATE_ENDPOINTS_SYSTEM, prompt,
+                              max_tokens=min(CONTRACT_MAX_TOKENS * 3, 48000)).get("endpoints", [])
+
+    # Build ordered work units: (tag, endpoint-chunk). Chunking bounds each call's
+    # output so it can't overflow, and yields more independent units to parallelise.
+    tags = list(by_tag.items())
+    units: list[tuple[int, str, list]] = []
+    for tag, eps in tags:
+        for i in range(0, len(eps), ENDPOINTS_PER_CALL):
+            units.append((len(units), tag, eps[i:i + ENDPOINTS_PER_CALL]))
+
+    results: dict[int, list] = {}
+    if TAG_CONCURRENCY > 1 and len(units) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        logger.info("Detailing %d endpoint(s) across %d call(s), concurrency=%d...",
+                    sum(len(e) for _, e in tags), len(units), TAG_CONCURRENCY)
+        with ThreadPoolExecutor(max_workers=TAG_CONCURRENCY) as pool:
+            futs = {pool.submit(_gen_chunk, tag, eps): idx for idx, tag, eps in units}
+            for fut, idx in list(futs.items()):
+                results[idx] = fut.result()
+    else:
+        for idx, tag, eps in units:
+            logger.info("  generating %d endpoint(s) for tag '%s'...", len(eps), tag)
+            results[idx] = _gen_chunk(tag, eps)
+
+    all_eps: list = []
+    for idx in range(len(units)):             # deterministic order, regardless of concurrency
+        all_eps.extend(results.get(idx, []))
 
     skeleton["endpoints"] = all_eps
     return skeleton
@@ -510,9 +604,13 @@ def _is_timeout(exc: Exception) -> bool:
 
 
 def design(facts: dict, decision: dict) -> dict:
-    """Single-shot generation; automatically falls back to batched per-tag
-    generation if the response is truncated OR the single call times out
-    (the batched calls are smaller and complete well within the timeout)."""
+    """Generate the contract. By default goes straight to the batched path
+    (skeleton + per-tag), because a single-shot attempt almost always truncates
+    for a real-sized API — wasting a slow call before the fallback takes over.
+    Set API_CONTRACT_SINGLE_SHOT=1 to try one-shot first (small APIs only), in
+    which case a truncation or timeout still falls back to batched."""
+    if not SINGLE_SHOT:
+        return _design_batched(facts, decision)
     user = _facts_and_choice(facts, decision) + "Produce the full API contract for the chosen approach."
     try:
         return _call_json(GENERATE_SYSTEM, user, max_tokens=CONTRACT_MAX_TOKENS)
@@ -532,6 +630,9 @@ def generate_contract(inputs: dict) -> dict:
     logger.info("Chosen approach: %s", decision.get("chosen"))
     logger.info("Generating API contract...")
     contract = design(facts, decision)
+    # Guarantee a flat components map regardless of which shape the model returned
+    # (single-shot or batched), so render/validate/$refs all resolve.
+    contract["components"] = _normalize_components(contract.get("components"))
     n_ep = len(contract.get("endpoints", []))
     logger.info("Contract generated: %d endpoints, %d component schemas",
                 n_ep, len(contract.get("components", {})))
@@ -616,6 +717,67 @@ def _schema_or_ref(ref: str | None, schemas: set) -> dict:
     return {"type": "object"}
 
 
+def _normalize_components(components) -> dict:
+    """Return a FLAT schema-name -> definition map.
+
+    The model sometimes returns the component block in OpenAPI's canonical
+    nested shape — {"schemas": {Name: def, ...}} (optionally with a sibling
+    "securitySchemes") — and sometimes as the flat {Name: def, ...} this agent's
+    code expects. Left un-normalised, the canonical shape gets wrapped AGAIN by
+    render_openapi into components.schemas.schemas.*, so no $ref resolves.
+    Accept both: drop any securitySchemes (the renderer supplies its own) and, if
+    all that remains is a single 'schemas' dict, unwrap it to the flat map."""
+    if not isinstance(components, dict):
+        return {}
+    comp = dict(components)
+    comp.pop("securitySchemes", None)              # renderer adds its own
+    if set(comp.keys()) == {"schemas"} and isinstance(comp["schemas"], dict):
+        return comp["schemas"]                     # unwrap canonical {schemas: {...}}
+    return comp
+
+
+_VALID_JSON_TYPES = {"string", "number", "integer", "boolean", "object", "array", "null"}
+
+
+def _coerce_type(t: str):
+    """Map a descriptive type string to a valid JSON-Schema (type, format).
+    Models sometimes emit things like 'string (ISO8601 date)' or 'integer (cents)'."""
+    low = t.lower()
+    base = next((v for v in ("integer", "number", "boolean", "object", "array",
+                             "null", "string") if v in low), "string")
+    fmt = None
+    if base == "string":
+        if any(w in low for w in ("date-time", "datetime", "iso8601", "iso 8601", "timestamp")):
+            fmt = "date-time"
+        elif "date" in low:
+            fmt = "date"
+        elif "uuid" in low:
+            fmt = "uuid"
+        elif "email" in low:
+            fmt = "email"
+        elif "uri" in low or "url" in low:
+            fmt = "uri"
+    return base, fmt
+
+
+def _sanitize_schema_types(node):
+    """Recursively fix invalid JSON-Schema 'type' values in Schema Objects.
+    Call ONLY on schema-bearing subtrees (components.schemas, paths) — never on
+    securitySchemes, whose 'type' uses a different vocabulary (http/apiKey/...)."""
+    if isinstance(node, dict):
+        t = node.get("type")
+        if isinstance(t, str) and t not in _VALID_JSON_TYPES:
+            base, fmt = _coerce_type(t)
+            node["type"] = base
+            if fmt and "format" not in node:
+                node["format"] = fmt
+        for v in node.values():
+            _sanitize_schema_types(v)
+    elif isinstance(node, list):
+        for v in node:
+            _sanitize_schema_types(v)
+
+
 def _normalize_refs(obj):
     """Rewrite $ref values to the canonical '#/components/schemas/<Name>'.
     Models often emit bare names ('Address') or a wrong path
@@ -687,7 +849,7 @@ def render_openapi(contract: dict) -> str:
                                  "content": {"application/json": content}}
 
         responses: dict = {}
-        for r in ep.get("responses", []):
+        for r in (ep.get("responses") or []):
             content = {"schema": _schema_or_ref(r.get("schema_ref"), schema_names)}
             if "example" in r:
                 content["example"] = r["example"]
@@ -704,6 +866,13 @@ def render_openapi(contract: dict) -> str:
 
         doc["paths"].setdefault(path, {})[method] = op
 
+    # Deterministically coerce any invalid JSON-Schema 'type' the model may have
+    # written (e.g. "string (ISO8601 date)") into a valid type + format, so the
+    # emitted document is always spec-valid. Applied to schema-bearing subtrees
+    # only — never to securitySchemes, whose 'type' vocabulary differs.
+    _sanitize_schema_types(doc["components"]["schemas"])
+    _sanitize_schema_types(doc["paths"])
+
     return "\n".join(_yaml_dump(doc)) + "\n"
 
 
@@ -713,10 +882,10 @@ def build_sample_payloads(contract: dict) -> dict:
     for ep in contract.get("endpoints", []):
         op_id = ep.get("operationId") or f"{ep.get('method','get')}_{ep['path']}"
         entry = {"method": ep.get("method", "get").upper(), "path": ep["path"]}
-        if ep.get("request", {}).get("example") is not None:
+        if (ep.get("request") or {}).get("example") is not None:
             entry["request"] = ep["request"]["example"]
         resp_examples = {str(r.get("status")): r["example"]
-                         for r in ep.get("responses", []) if "example" in r}
+                         for r in (ep.get("responses") or []) if "example" in r}
         if resp_examples:
             entry["responses"] = resp_examples
         if "request" in entry or "responses" in entry:
@@ -739,14 +908,14 @@ def validate_contract(contract: dict, facts: dict) -> list[str]:
 
     # every referenced schema must be defined
     for ep in endpoints:
-        for ref in ([ep.get("request", {}).get("schema_ref")] +
-                    [r.get("schema_ref") for r in ep.get("responses", [])]):
+        for ref in ([(ep.get("request") or {}).get("schema_ref")] +
+                    [r.get("schema_ref") for r in (ep.get("responses") or [])]):
             if ref and ref not in schema_names:
                 warnings.append(f"{ep.get('method','?').upper()} {ep.get('path','?')} "
                                 f"references undefined schema '{ref}'")
         # error shape present on mutating ops?
         if ep.get("method", "get").lower() in ("post", "put", "patch", "delete"):
-            statuses = {str(r.get("status")) for r in ep.get("responses", [])}
+            statuses = {str(r.get("status")) for r in (ep.get("responses") or [])}
             if not any(s.startswith(("4", "5")) for s in statuses):
                 warnings.append(f"{ep.get('method').upper()} {ep.get('path')} has no error response")
 
@@ -758,8 +927,10 @@ def validate_contract(contract: dict, facts: dict) -> list[str]:
                 and (r[:-1] + "ies" if r.endswith("y") else r + "s") not in paths_blob:
             warnings.append(f"resource '{res}' has no obvious endpoint")
 
-    # protected operations should reference known roles
-    roles = {norm(r) for r in facts.get("roles", []) if r}
+    # protected operations should reference known roles (from user_features labels
+    # OR the schema's declared role enum — the contract legitimately uses either)
+    roles = {norm(r) for r in facts.get("roles", []) if r} \
+        | {norm(r) for r in facts.get("role_values", []) if r}
     for ep in endpoints:
         for role in ep.get("roles", []):
             if roles and norm(role) not in roles:

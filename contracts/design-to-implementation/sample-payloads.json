@@ -1,0 +1,2757 @@
+{
+  "registerUser": {
+    "method": "POST",
+    "path": "/auth/register",
+    "request": {
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane.doe@example.com",
+      "phone": "+14155550101",
+      "password": "S3cur3P@ssw0rd!",
+      "role": "customer"
+    },
+    "responses": {
+      "201": {
+        "id": "64b1f2c3e4b0a1d2e3f40001",
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "email": "jane.doe@example.com",
+        "phone": "+14155550101",
+        "role": "customer",
+        "isVerified": false,
+        "status": "pendingVerification",
+        "avatarUrl": null,
+        "savedAddresses": [],
+        "notificationPreferences": {
+          "email": true,
+          "sms": true,
+          "push": false
+        },
+        "failedLoginAttempts": 0,
+        "createdAt": "2024-07-15T10:00:00.000Z",
+        "updatedAt": "2024-07-15T10:00:00.000Z"
+      }
+    }
+  },
+  "verifyAccount": {
+    "method": "POST",
+    "path": "/auth/verify",
+    "request": {
+      "email": "jane.doe@example.com",
+      "token": "a3f9c21e8b4d67051234abcd"
+    },
+    "responses": {
+      "200": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGIxZjJjM2U0YjBhMWQyZTNmNDAwMDEiLCJyb2xlIjoiY3VzdG9tZXIiLCJpYXQiOjE3MjEwMzIwMDAsImV4cCI6MTcyMTExODQwMH0.signature",
+        "tokenType": "Bearer",
+        "expiresIn": 86400,
+        "user": {
+          "id": "64b1f2c3e4b0a1d2e3f40001",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "email": "jane.doe@example.com",
+          "role": "customer",
+          "isVerified": true,
+          "status": "active"
+        }
+      }
+    }
+  },
+  "resendVerification": {
+    "method": "POST",
+    "path": "/auth/resend-verification",
+    "request": {
+      "email": "jane.doe@example.com"
+    },
+    "responses": {
+      "200": {
+        "code": "VERIFICATION_RESENT",
+        "message": "If an unverified account exists for that address, a new verification token has been sent."
+      }
+    }
+  },
+  "loginUser": {
+    "method": "POST",
+    "path": "/auth/login",
+    "request": {
+      "email": "jane.doe@example.com",
+      "password": "S3cur3P@ssw0rd!"
+    },
+    "responses": {
+      "200": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGIxZjJjM2U0YjBhMWQyZTNmNDAwMDEiLCJyb2xlIjoiY3VzdG9tZXIiLCJpYXQiOjE3MjEwMzIwMDAsImV4cCI6MTcyMTExODQwMH0.signature",
+        "tokenType": "Bearer",
+        "expiresIn": 86400,
+        "user": {
+          "id": "64b1f2c3e4b0a1d2e3f40001",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "email": "jane.doe@example.com",
+          "role": "customer",
+          "isVerified": true,
+          "status": "active",
+          "avatarUrl": "https://cdn.example.com/avatars/64b1f2c3.jpg"
+        }
+      }
+    }
+  },
+  "logoutUser": {
+    "method": "POST",
+    "path": "/auth/logout",
+    "request": {},
+    "responses": {
+      "204": {}
+    }
+  },
+  "forgotPassword": {
+    "method": "POST",
+    "path": "/auth/forgot-password",
+    "request": {
+      "email": "jane.doe@example.com"
+    },
+    "responses": {
+      "200": {
+        "code": "RESET_EMAIL_SENT",
+        "message": "If an account with that email exists, a password reset link has been sent."
+      }
+    }
+  },
+  "resetPassword": {
+    "method": "POST",
+    "path": "/auth/reset-password",
+    "request": {
+      "email": "jane.doe@example.com",
+      "token": "d7e2a91f3c084b56789efabc",
+      "newPassword": "N3wS3cur3P@ss!"
+    },
+    "responses": {
+      "200": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NGIxZjJjM2U0YjBhMWQyZTNmNDAwMDEiLCJyb2xlIjoiY3VzdG9tZXIiLCJpYXQiOjE3MjEwMzUwMDAsImV4cCI6MTcyMTEyMTQwMH0.newsignature",
+        "tokenType": "Bearer",
+        "expiresIn": 86400,
+        "user": {
+          "id": "64b1f2c3e4b0a1d2e3f40001",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "email": "jane.doe@example.com",
+          "role": "customer",
+          "isVerified": true,
+          "status": "active"
+        }
+      }
+    }
+  },
+  "getMyProfile": {
+    "method": "GET",
+    "path": "/users/me",
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1a2b3c4d5e6",
+        "email": "jane.doe@example.com",
+        "phone": "+14155552671",
+        "role": "customer",
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "avatarUrl": "https://cdn.example.com/avatars/jane-doe.jpg",
+        "isVerified": true,
+        "failedLoginAttempts": 0,
+        "status": "active",
+        "savedAddresses": [
+          {
+            "id": "64b1f2c3e4b0a1a2b3c4d5e7",
+            "label": "Home",
+            "street": "123 Main St",
+            "city": "San Francisco",
+            "state": "CA",
+            "postalCode": "94105",
+            "country": "US",
+            "isDefault": true
+          }
+        ],
+        "notificationPreferences": {
+          "orderUpdates": true,
+          "promotions": false,
+          "sms": true,
+          "push": true
+        },
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-06-20T08:45:00Z"
+      }
+    }
+  },
+  "updateMyProfile": {
+    "method": "PATCH",
+    "path": "/users/me",
+    "request": {
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "phone": "+14155559876",
+      "avatarUrl": "https://cdn.example.com/avatars/jane-smith-new.jpg",
+      "notificationPreferences": {
+        "orderUpdates": true,
+        "promotions": true,
+        "sms": false,
+        "push": true
+      },
+      "pushToken": "fcm-token-abc123xyz"
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1a2b3c4d5e6",
+        "email": "jane.doe@example.com",
+        "phone": "+14155559876",
+        "role": "customer",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "avatarUrl": "https://cdn.example.com/avatars/jane-smith-new.jpg",
+        "isVerified": true,
+        "failedLoginAttempts": 0,
+        "status": "active",
+        "savedAddresses": [],
+        "notificationPreferences": {
+          "orderUpdates": true,
+          "promotions": true,
+          "sms": false,
+          "push": true
+        },
+        "createdAt": "2024-01-15T10:30:00Z",
+        "updatedAt": "2024-07-01T12:00:00Z"
+      }
+    }
+  },
+  "updateAgentProfile": {
+    "method": "PATCH",
+    "path": "/users/me/agent-profile",
+    "request": {
+      "vehicleType": "bicycle",
+      "vehiclePlate": "N/A",
+      "licenseNumber": "DL-2024-00987",
+      "isAvailable": true,
+      "currentLocation": {
+        "type": "string",
+        "coordinates": [
+          -122.4194,
+          37.7749
+        ]
+      }
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1a2b3c4d5f0",
+        "email": "agent.bob@example.com",
+        "phone": "+14155550011",
+        "role": "deliveryAgent",
+        "firstName": "Bob",
+        "lastName": "Carter",
+        "avatarUrl": "https://cdn.example.com/avatars/bob-carter.jpg",
+        "isVerified": true,
+        "failedLoginAttempts": 0,
+        "status": "active",
+        "agentProfile": {
+          "vehicleType": "bicycle",
+          "vehiclePlate": "N/A",
+          "licenseNumber": "DL-2024-00987",
+          "isAvailable": true,
+          "currentLocation": {
+            "type": "string",
+            "coordinates": [
+              -122.4194,
+              37.7749
+            ]
+          }
+        },
+        "createdAt": "2024-02-10T09:00:00Z",
+        "updatedAt": "2024-07-01T14:30:00Z"
+      }
+    }
+  },
+  "listMyAddresses": {
+    "method": "GET",
+    "path": "/users/me/addresses",
+    "responses": {
+      "200": [
+        {
+          "id": "64b1f2c3e4b0a1a2b3c4d5e7",
+          "label": "Home",
+          "street": "123 Main St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postalCode": "94105",
+          "country": "US",
+          "location": {
+            "type": "string",
+            "coordinates": [
+              -122.4194,
+              37.7749
+            ]
+          },
+          "isDefault": true
+        },
+        {
+          "id": "64b1f2c3e4b0a1a2b3c4d5e8",
+          "label": "Work",
+          "street": "456 Market St",
+          "city": "San Francisco",
+          "state": "CA",
+          "postalCode": "94103",
+          "country": "US",
+          "location": {
+            "type": "string",
+            "coordinates": [
+              -122.3988,
+              37.7915
+            ]
+          },
+          "isDefault": false
+        }
+      ]
+    }
+  },
+  "createAddress": {
+    "method": "POST",
+    "path": "/users/me/addresses",
+    "request": {
+      "label": "Mom's House",
+      "street": "789 Oak Ave",
+      "city": "Oakland",
+      "state": "CA",
+      "postalCode": "94607",
+      "country": "US",
+      "location": {
+        "type": "string",
+        "coordinates": [
+          -122.2711,
+          37.8044
+        ]
+      },
+      "isDefault": false
+    },
+    "responses": {
+      "201": {
+        "id": "64b1f2c3e4b0a1a2b3c4d5f1",
+        "label": "Mom's House",
+        "street": "789 Oak Ave",
+        "city": "Oakland",
+        "state": "CA",
+        "postalCode": "94607",
+        "country": "US",
+        "location": {
+          "type": "string",
+          "coordinates": [
+            -122.2711,
+            37.8044
+          ]
+        },
+        "isDefault": false
+      }
+    }
+  },
+  "updateAddress": {
+    "method": "PATCH",
+    "path": "/users/me/addresses/{addressId}",
+    "request": {
+      "label": "Mom's New House",
+      "street": "789 Oak Ave Apt 2",
+      "city": "Oakland",
+      "state": "CA",
+      "postalCode": "94607",
+      "country": "US",
+      "location": {
+        "type": "string",
+        "coordinates": [
+          -122.2715,
+          37.8048
+        ]
+      },
+      "isDefault": true
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1a2b3c4d5f1",
+        "label": "Mom's New House",
+        "street": "789 Oak Ave Apt 2",
+        "city": "Oakland",
+        "state": "CA",
+        "postalCode": "94607",
+        "country": "US",
+        "location": {
+          "type": "string",
+          "coordinates": [
+            -122.2715,
+            37.8048
+          ]
+        },
+        "isDefault": true
+      }
+    }
+  },
+  "deleteAddress": {
+    "method": "DELETE",
+    "path": "/users/me/addresses/{addressId}",
+    "responses": {
+      "204": null
+    }
+  },
+  "adminListUsers": {
+    "method": "GET",
+    "path": "/users",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "64b1f2c3e4b0a1a2b3c4d5e6",
+            "email": "jane.doe@example.com",
+            "phone": "+14155552671",
+            "role": "customer",
+            "firstName": "Jane",
+            "lastName": "Doe",
+            "avatarUrl": "https://cdn.example.com/avatars/jane-doe.jpg",
+            "isVerified": true,
+            "failedLoginAttempts": 0,
+            "status": "active",
+            "createdAt": "2024-01-15T10:30:00Z",
+            "updatedAt": "2024-06-20T08:45:00Z"
+          },
+          {
+            "id": "64b1f2c3e4b0a1a2b3c4d5f2",
+            "email": "john.manager@example.com",
+            "phone": "+14155557890",
+            "role": "restaurantManager",
+            "firstName": "John",
+            "lastName": "Manager",
+            "avatarUrl": null,
+            "isVerified": true,
+            "failedLoginAttempts": 0,
+            "status": "active",
+            "restaurantRef": "64b1f2c3e4b0a1a2b3c4d601",
+            "createdAt": "2024-02-01T08:00:00Z",
+            "updatedAt": "2024-05-10T11:20:00Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 342,
+          "totalPages": 18,
+          "hasNextPage": true,
+          "hasPrevPage": false
+        }
+      }
+    }
+  },
+  "adminGetUser": {
+    "method": "GET",
+    "path": "/users/{userId}",
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1d2e3f40001",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "jane.smith@example.com",
+        "phone": "+14155552671",
+        "role": "customer",
+        "avatarUrl": "https://cdn.foodapp.io/avatars/64b1f2c3e4b0a1d2e3f40001.jpg",
+        "isVerified": true,
+        "status": "active",
+        "failedLoginAttempts": 0,
+        "lockedUntil": null,
+        "savedAddresses": [
+          {
+            "id": "64b1f2c3e4b0a1d2e3f40010",
+            "label": "Home",
+            "street": "123 Maple Street",
+            "city": "San Francisco",
+            "state": "CA",
+            "postalCode": "94103",
+            "country": "US",
+            "coordinates": {
+              "lat": 37.7749,
+              "lng": -122.4194
+            }
+          }
+        ],
+        "restaurantRef": null,
+        "agentProfile": null,
+        "notificationPreferences": {
+          "orderUpdates": true,
+          "promotions": false,
+          "sms": true,
+          "email": true,
+          "push": true
+        },
+        "createdAt": "2024-01-15T09:23:00Z",
+        "updatedAt": "2024-06-10T14:05:30Z"
+      }
+    }
+  },
+  "adminUpdateUserStatus": {
+    "method": "PATCH",
+    "path": "/users/{userId}/status",
+    "request": {
+      "status": "suspended",
+      "reason": "Violation of platform terms of service — repeated fraudulent orders detected."
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1d2e3f40001",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "jane.smith@example.com",
+        "phone": "+14155552671",
+        "role": "customer",
+        "avatarUrl": "https://cdn.foodapp.io/avatars/64b1f2c3e4b0a1d2e3f40001.jpg",
+        "isVerified": true,
+        "status": "suspended",
+        "failedLoginAttempts": 0,
+        "lockedUntil": null,
+        "savedAddresses": [
+          {
+            "id": "64b1f2c3e4b0a1d2e3f40010",
+            "label": "Home",
+            "street": "123 Maple Street",
+            "city": "San Francisco",
+            "state": "CA",
+            "postalCode": "94103",
+            "country": "US",
+            "coordinates": {
+              "lat": 37.7749,
+              "lng": -122.4194
+            }
+          }
+        ],
+        "restaurantRef": null,
+        "agentProfile": null,
+        "notificationPreferences": {
+          "orderUpdates": true,
+          "promotions": false,
+          "sms": true,
+          "email": true,
+          "push": true
+        },
+        "createdAt": "2024-01-15T09:23:00Z",
+        "updatedAt": "2024-06-12T08:47:15Z"
+      }
+    }
+  },
+  "listRestaurants": {
+    "method": "GET",
+    "path": "/restaurants",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+            "name": "Bella Napoli",
+            "description": "Authentic Neapolitan pizza and pasta",
+            "cuisineTypes": [
+              "Italian",
+              "Pizza"
+            ],
+            "logoUrl": "https://cdn.example.com/restaurants/bella-napoli-logo.jpg",
+            "bannerUrl": "https://cdn.example.com/restaurants/bella-napoli-banner.jpg",
+            "status": "active",
+            "isOpen": true,
+            "address": {
+              "line1": "42 Margherita Street",
+              "city": "Chicago",
+              "state": "IL",
+              "postalCode": "60601",
+              "country": "US"
+            },
+            "location": {
+              "type": "string",
+              "coordinates": [
+                -87.6298,
+                41.8781
+              ]
+            },
+            "deliveryRadiusKm": 8,
+            "deliveryFee": "2.99",
+            "minimumOrderValue": "15.00",
+            "estimatedDeliveryTimeMinutes": 35,
+            "averageRating": 4.7,
+            "totalReviews": 312,
+            "isCodAllowed": false
+          },
+          {
+            "id": "64b1f2e3a4c5d6e7f8a9b0c2",
+            "name": "Tokyo Bites",
+            "description": "Modern Japanese street food",
+            "cuisineTypes": [
+              "Japanese",
+              "Sushi"
+            ],
+            "logoUrl": "https://cdn.example.com/restaurants/tokyo-bites-logo.jpg",
+            "bannerUrl": "https://cdn.example.com/restaurants/tokyo-bites-banner.jpg",
+            "status": "active",
+            "isOpen": true,
+            "address": {
+              "line1": "18 Sakura Lane",
+              "city": "Chicago",
+              "state": "IL",
+              "postalCode": "60602",
+              "country": "US"
+            },
+            "location": {
+              "type": "string",
+              "coordinates": [
+                -87.6352,
+                41.8827
+              ]
+            },
+            "deliveryRadiusKm": 5,
+            "deliveryFee": "1.49",
+            "minimumOrderValue": "20.00",
+            "estimatedDeliveryTimeMinutes": 25,
+            "averageRating": 4.5,
+            "totalReviews": 189,
+            "isCodAllowed": true
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 47,
+          "totalPages": 3
+        }
+      }
+    }
+  },
+  "getRestaurant": {
+    "method": "GET",
+    "path": "/restaurants/{restaurantId}",
+    "responses": {
+      "200": {
+        "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+        "name": "Bella Napoli",
+        "description": "Authentic Neapolitan pizza and pasta since 1998",
+        "cuisineTypes": [
+          "Italian",
+          "Pizza"
+        ],
+        "logoUrl": "https://cdn.example.com/restaurants/bella-napoli-logo.jpg",
+        "bannerUrl": "https://cdn.example.com/restaurants/bella-napoli-banner.jpg",
+        "ownerRef": "64a0e1d2b3c4d5e6f7a8b9c0",
+        "status": "active",
+        "isOpen": true,
+        "address": {
+          "line1": "42 Margherita Street",
+          "city": "Chicago",
+          "state": "IL",
+          "postalCode": "60601",
+          "country": "US"
+        },
+        "location": {
+          "type": "string",
+          "coordinates": [
+            -87.6298,
+            41.8781
+          ]
+        },
+        "deliveryRadiusKm": 8,
+        "deliveryFee": "2.99",
+        "minimumOrderValue": "15.00",
+        "estimatedDeliveryTimeMinutes": 35,
+        "averageRating": 4.7,
+        "totalReviews": 312,
+        "isCodAllowed": false,
+        "operatingHours": [
+          {
+            "dayOfWeek": 1,
+            "openTime": "11:00",
+            "closeTime": "22:00"
+          },
+          {
+            "dayOfWeek": 2,
+            "openTime": "11:00",
+            "closeTime": "22:00"
+          },
+          {
+            "dayOfWeek": 5,
+            "openTime": "11:00",
+            "closeTime": "23:00"
+          },
+          {
+            "dayOfWeek": 6,
+            "openTime": "12:00",
+            "closeTime": "23:00"
+          },
+          {
+            "dayOfWeek": 0,
+            "openTime": "12:00",
+            "closeTime": "21:00"
+          }
+        ],
+        "menuCategories": [
+          {
+            "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+            "name": "Pizzas",
+            "description": "Wood-fired Neapolitan pizzas",
+            "sortOrder": 1,
+            "isAvailable": true,
+            "items": [
+              {
+                "id": "64d3b4c5d6e7f8a9b0c1d2e3",
+                "name": "Margherita",
+                "description": "San Marzano tomato, fior di latte, fresh basil",
+                "basePrice": "14.50",
+                "imageUrl": "https://cdn.example.com/items/margherita.jpg",
+                "isAvailable": true,
+                "optionGroups": [
+                  {
+                    "id": "64e4c5d6e7f8a9b0c1d2e3f4",
+                    "name": "Size",
+                    "isRequired": true,
+                    "minSelections": 1,
+                    "maxSelections": 1,
+                    "options": [
+                      {
+                        "id": "64f5d6e7f8a9b0c1d2e3f4a5",
+                        "label": "Small (10\")",
+                        "additionalPrice": "0.00"
+                      },
+                      {
+                        "id": "64f5d6e7f8a9b0c1d2e3f4a6",
+                        "label": "Large (14\")",
+                        "additionalPrice": "4.00"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "64c2a3b4c5d6e7f8a9b0c1d3",
+            "name": "Pastas",
+            "description": "Handmade pasta dishes",
+            "sortOrder": 2,
+            "isAvailable": true,
+            "items": [
+              {
+                "id": "64d3b4c5d6e7f8a9b0c1d2e4",
+                "name": "Cacio e Pepe",
+                "description": "Tonnarelli pasta, Pecorino Romano, black pepper",
+                "basePrice": "16.00",
+                "imageUrl": "https://cdn.example.com/items/cacio-e-pepe.jpg",
+                "isAvailable": true,
+                "optionGroups": []
+              }
+            ]
+          }
+        ],
+        "createdAt": "2023-07-14T10:22:30.000Z",
+        "updatedAt": "2024-03-05T08:45:10.000Z"
+      }
+    }
+  },
+  "adminCreateRestaurant": {
+    "method": "POST",
+    "path": "/restaurants",
+    "request": {
+      "name": "Bella Napoli",
+      "description": "Authentic Neapolitan pizza and pasta since 1998",
+      "cuisineTypes": [
+        "Italian",
+        "Pizza"
+      ],
+      "logoUrl": "https://cdn.example.com/restaurants/bella-napoli-logo.jpg",
+      "bannerUrl": "https://cdn.example.com/restaurants/bella-napoli-banner.jpg",
+      "ownerRef": "64a0e1d2b3c4d5e6f7a8b9c0",
+      "address": {
+        "line1": "42 Margherita Street",
+        "city": "Chicago",
+        "state": "IL",
+        "postalCode": "60601",
+        "country": "US"
+      },
+      "location": {
+        "type": "string",
+        "coordinates": [
+          -87.6298,
+          41.8781
+        ]
+      },
+      "deliveryRadiusKm": 8,
+      "deliveryFee": "2.99",
+      "minimumOrderValue": "15.00",
+      "estimatedDeliveryTimeMinutes": 35,
+      "isCodAllowed": false,
+      "commissionRate": 15.0,
+      "operatingHours": [
+        {
+          "dayOfWeek": 1,
+          "openTime": "11:00",
+          "closeTime": "22:00"
+        },
+        {
+          "dayOfWeek": 2,
+          "openTime": "11:00",
+          "closeTime": "22:00"
+        },
+        {
+          "dayOfWeek": 5,
+          "openTime": "11:00",
+          "closeTime": "23:00"
+        },
+        {
+          "dayOfWeek": 6,
+          "openTime": "12:00",
+          "closeTime": "23:00"
+        },
+        {
+          "dayOfWeek": 0,
+          "openTime": "12:00",
+          "closeTime": "21:00"
+        }
+      ]
+    },
+    "responses": {
+      "201": {
+        "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+        "name": "Bella Napoli",
+        "description": "Authentic Neapolitan pizza and pasta since 1998",
+        "cuisineTypes": [
+          "Italian",
+          "Pizza"
+        ],
+        "logoUrl": "https://cdn.example.com/restaurants/bella-napoli-logo.jpg",
+        "bannerUrl": "https://cdn.example.com/restaurants/bella-napoli-banner.jpg",
+        "ownerRef": "64a0e1d2b3c4d5e6f7a8b9c0",
+        "status": "pendingApproval",
+        "isOpen": false,
+        "address": {
+          "line1": "42 Margherita Street",
+          "city": "Chicago",
+          "state": "IL",
+          "postalCode": "60601",
+          "country": "US"
+        },
+        "location": {
+          "type": "string",
+          "coordinates": [
+            -87.6298,
+            41.8781
+          ]
+        },
+        "deliveryRadiusKm": 8,
+        "deliveryFee": "2.99",
+        "minimumOrderValue": "15.00",
+        "estimatedDeliveryTimeMinutes": 35,
+        "averageRating": null,
+        "totalReviews": 0,
+        "isCodAllowed": false,
+        "commissionRate": 15.0,
+        "operatingHours": [
+          {
+            "dayOfWeek": 1,
+            "openTime": "11:00",
+            "closeTime": "22:00"
+          },
+          {
+            "dayOfWeek": 2,
+            "openTime": "11:00",
+            "closeTime": "22:00"
+          },
+          {
+            "dayOfWeek": 5,
+            "openTime": "11:00",
+            "closeTime": "23:00"
+          },
+          {
+            "dayOfWeek": 6,
+            "openTime": "12:00",
+            "closeTime": "23:00"
+          },
+          {
+            "dayOfWeek": 0,
+            "openTime": "12:00",
+            "closeTime": "21:00"
+          }
+        ],
+        "menuCategories": [],
+        "createdAt": "2024-06-01T09:00:00.000Z",
+        "updatedAt": "2024-06-01T09:00:00.000Z"
+      }
+    }
+  },
+  "updateRestaurant": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}",
+    "request": {
+      "description": "Authentic Neapolitan pizza, pasta, and desserts since 1998",
+      "deliveryFee": "3.49",
+      "minimumOrderValue": "18.00",
+      "estimatedDeliveryTimeMinutes": 30,
+      "deliveryRadiusKm": 10,
+      "isCodAllowed": true,
+      "operatingHours": [
+        {
+          "dayOfWeek": 1,
+          "openTime": "10:00",
+          "closeTime": "22:30"
+        },
+        {
+          "dayOfWeek": 2,
+          "openTime": "10:00",
+          "closeTime": "22:30"
+        },
+        {
+          "dayOfWeek": 5,
+          "openTime": "10:00",
+          "closeTime": "23:30"
+        },
+        {
+          "dayOfWeek": 6,
+          "openTime": "11:00",
+          "closeTime": "23:30"
+        },
+        {
+          "dayOfWeek": 0,
+          "openTime": "11:00",
+          "closeTime": "21:30"
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+        "name": "Bella Napoli",
+        "description": "Authentic Neapolitan pizza, pasta, and desserts since 1998",
+        "cuisineTypes": [
+          "Italian",
+          "Pizza"
+        ],
+        "logoUrl": "https://cdn.example.com/restaurants/bella-napoli-logo.jpg",
+        "bannerUrl": "https://cdn.example.com/restaurants/bella-napoli-banner.jpg",
+        "ownerRef": "64a0e1d2b3c4d5e6f7a8b9c0",
+        "status": "active",
+        "isOpen": true,
+        "address": {
+          "line1": "42 Margherita Street",
+          "city": "Chicago",
+          "state": "IL",
+          "postalCode": "60601",
+          "country": "US"
+        },
+        "location": {
+          "type": "string",
+          "coordinates": [
+            -87.6298,
+            41.8781
+          ]
+        },
+        "deliveryRadiusKm": 10,
+        "deliveryFee": "3.49",
+        "minimumOrderValue": "18.00",
+        "estimatedDeliveryTimeMinutes": 30,
+        "averageRating": 4.7,
+        "totalReviews": 312,
+        "isCodAllowed": true,
+        "commissionRate": 15.0,
+        "operatingHours": [
+          {
+            "dayOfWeek": 1,
+            "openTime": "10:00",
+            "closeTime": "22:30"
+          },
+          {
+            "dayOfWeek": 2,
+            "openTime": "10:00",
+            "closeTime": "22:30"
+          },
+          {
+            "dayOfWeek": 5,
+            "openTime": "10:00",
+            "closeTime": "23:30"
+          },
+          {
+            "dayOfWeek": 6,
+            "openTime": "11:00",
+            "closeTime": "23:30"
+          },
+          {
+            "dayOfWeek": 0,
+            "openTime": "11:00",
+            "closeTime": "21:30"
+          }
+        ],
+        "updatedAt": "2024-06-10T14:22:00.000Z"
+      }
+    }
+  },
+  "adminUpdateRestaurantStatus": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}/status",
+    "request": {
+      "status": "suspended",
+      "reason": "Multiple verified complaints about food quality and delivery fraud detected."
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+        "name": "Bella Napoli",
+        "status": "suspended",
+        "isOpen": false,
+        "updatedAt": "2024-06-12T11:05:00.000Z"
+      }
+    }
+  },
+  "toggleRestaurantOpen": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}/open",
+    "request": {
+      "isOpen": true
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2e3a4c5d6e7f8a9b0c1",
+        "name": "Bella Napoli",
+        "status": "active",
+        "isOpen": true,
+        "updatedAt": "2024-06-15T10:00:00.000Z"
+      }
+    }
+  },
+  "listRestaurantReviews": {
+    "method": "GET",
+    "path": "/restaurants/{restaurantId}/reviews",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "64e1f2a3b4c5d6e7f8a9b0c1",
+            "orderRef": "64d0e1f2a3b4c5d6e7f8a9b0",
+            "customerRef": "64c9d0e1f2a3b4c5d6e7f8a9",
+            "restaurantRef": "64b1f2e3a4c5d6e7f8a9b0c1",
+            "rating": 5,
+            "comment": "Best pizza in Chicago! The Margherita was perfectly charred and the service was fast.",
+            "status": "published",
+            "createdAt": "2024-05-20T18:45:00.000Z"
+          },
+          {
+            "id": "64e1f2a3b4c5d6e7f8a9b0c2",
+            "orderRef": "64d0e1f2a3b4c5d6e7f8a9b1",
+            "customerRef": "64c9d0e1f2a3b4c5d6e7f8aa",
+            "restaurantRef": "64b1f2e3a4c5d6e7f8a9b0c1",
+            "rating": 4,
+            "comment": "Really good pasta, delivery was a bit slow but food arrived hot.",
+            "status": "published",
+            "createdAt": "2024-05-18T20:10:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 312,
+          "totalPages": 16
+        }
+      }
+    }
+  },
+  "listMenuCategories": {
+    "method": "GET",
+    "path": "/restaurants/{restaurantId}/menu-categories",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "64b1f2c3e4b0a1234567ab01",
+            "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+            "name": "Starters",
+            "description": "Light bites to begin your meal",
+            "imageUrl": "https://cdn.example.com/menus/starters.jpg",
+            "sortOrder": 1,
+            "isActive": true,
+            "items": [
+              {
+                "id": "64b1f2c3e4b0a1234567ac01",
+                "name": "Spring Rolls",
+                "description": "Crispy vegetable spring rolls served with sweet chilli sauce",
+                "price": "5.99",
+                "imageUrl": "https://cdn.example.com/items/spring-rolls.jpg",
+                "isAvailable": true,
+                "sortOrder": 1,
+                "optionGroups": [
+                  {
+                    "id": "64b1f2c3e4b0a1234567ad01",
+                    "name": "Sauce",
+                    "isRequired": false,
+                    "minSelections": 0,
+                    "maxSelections": 1,
+                    "options": [
+                      {
+                        "id": "64b1f2c3e4b0a1234567ae01",
+                        "name": "Sweet Chilli",
+                        "additionalPrice": "0.00"
+                      },
+                      {
+                        "id": "64b1f2c3e4b0a1234567ae02",
+                        "name": "Soy Sauce",
+                        "additionalPrice": "0.00"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "64b1f2c3e4b0a1234567ab02",
+            "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+            "name": "Mains",
+            "description": "Hearty main courses",
+            "imageUrl": "https://cdn.example.com/menus/mains.jpg",
+            "sortOrder": 2,
+            "isActive": true,
+            "items": []
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "pageSize": 20,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  "createMenuCategory": {
+    "method": "POST",
+    "path": "/restaurants/{restaurantId}/menu-categories",
+    "request": {
+      "name": "Desserts",
+      "description": "Sweet treats to finish your meal",
+      "imageUrl": "https://cdn.example.com/menus/desserts.jpg",
+      "sortOrder": 3,
+      "isActive": true
+    },
+    "responses": {
+      "201": {
+        "id": "64b1f2c3e4b0a1234567ab03",
+        "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+        "name": "Desserts",
+        "description": "Sweet treats to finish your meal",
+        "imageUrl": "https://cdn.example.com/menus/desserts.jpg",
+        "sortOrder": 3,
+        "isActive": true,
+        "items": [],
+        "createdAt": "2024-06-15T10:30:00.000Z",
+        "updatedAt": "2024-06-15T10:30:00.000Z"
+      }
+    }
+  },
+  "updateMenuCategory": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}",
+    "request": {
+      "name": "Sweet Desserts",
+      "description": "Indulgent sweet treats to finish your meal",
+      "sortOrder": 4,
+      "isActive": true
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1234567ab03",
+        "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+        "name": "Sweet Desserts",
+        "description": "Indulgent sweet treats to finish your meal",
+        "imageUrl": "https://cdn.example.com/menus/desserts.jpg",
+        "sortOrder": 4,
+        "isActive": true,
+        "items": [],
+        "createdAt": "2024-06-15T10:30:00.000Z",
+        "updatedAt": "2024-06-15T11:00:00.000Z"
+      }
+    }
+  },
+  "deleteMenuCategory": {
+    "method": "DELETE",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}",
+    "responses": {
+      "204": null
+    }
+  },
+  "createMenuItem": {
+    "method": "POST",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}/items",
+    "request": {
+      "name": "Chocolate Lava Cake",
+      "description": "Warm chocolate cake with a molten centre, served with vanilla ice cream",
+      "price": "7.50",
+      "imageUrl": "https://cdn.example.com/items/lava-cake.jpg",
+      "isAvailable": true,
+      "sortOrder": 1,
+      "optionGroups": [
+        {
+          "name": "Ice Cream Flavour",
+          "isRequired": false,
+          "minSelections": 0,
+          "maxSelections": 1,
+          "options": [
+            {
+              "name": "Vanilla",
+              "additionalPrice": "0.00"
+            },
+            {
+              "name": "Salted Caramel",
+              "additionalPrice": "0.50"
+            }
+          ]
+        }
+      ]
+    },
+    "responses": {
+      "201": {
+        "id": "64b1f2c3e4b0a1234567ac10",
+        "categoryRef": "64b1f2c3e4b0a1234567ab03",
+        "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+        "name": "Chocolate Lava Cake",
+        "description": "Warm chocolate cake with a molten centre, served with vanilla ice cream",
+        "price": "7.50",
+        "imageUrl": "https://cdn.example.com/items/lava-cake.jpg",
+        "isAvailable": true,
+        "sortOrder": 1,
+        "optionGroups": [
+          {
+            "id": "64b1f2c3e4b0a1234567ad10",
+            "name": "Ice Cream Flavour",
+            "isRequired": false,
+            "minSelections": 0,
+            "maxSelections": 1,
+            "options": [
+              {
+                "id": "64b1f2c3e4b0a1234567ae10",
+                "name": "Vanilla",
+                "additionalPrice": "0.00"
+              },
+              {
+                "id": "64b1f2c3e4b0a1234567ae11",
+                "name": "Salted Caramel",
+                "additionalPrice": "0.50"
+              }
+            ]
+          }
+        ],
+        "createdAt": "2024-06-15T12:00:00.000Z",
+        "updatedAt": "2024-06-15T12:00:00.000Z"
+      }
+    }
+  },
+  "updateMenuItem": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}/items/{itemId}",
+    "request": {
+      "name": "Chocolate Lava Cake (Large)",
+      "description": "Larger warm chocolate cake with a molten centre, served with two scoops of ice cream",
+      "price": "9.50",
+      "imageUrl": "https://cdn.example.com/items/lava-cake-large.jpg",
+      "isAvailable": true,
+      "sortOrder": 1,
+      "optionGroups": [
+        {
+          "name": "Ice Cream Flavour",
+          "isRequired": true,
+          "minSelections": 1,
+          "maxSelections": 2,
+          "options": [
+            {
+              "name": "Vanilla",
+              "additionalPrice": "0.00"
+            },
+            {
+              "name": "Salted Caramel",
+              "additionalPrice": "0.50"
+            },
+            {
+              "name": "Strawberry",
+              "additionalPrice": "0.50"
+            }
+          ]
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1234567ac10",
+        "categoryRef": "64b1f2c3e4b0a1234567ab03",
+        "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+        "name": "Chocolate Lava Cake (Large)",
+        "description": "Larger warm chocolate cake with a molten centre, served with two scoops of ice cream",
+        "price": "9.50",
+        "imageUrl": "https://cdn.example.com/items/lava-cake-large.jpg",
+        "isAvailable": true,
+        "sortOrder": 1,
+        "optionGroups": [
+          {
+            "id": "64b1f2c3e4b0a1234567ad10",
+            "name": "Ice Cream Flavour",
+            "isRequired": true,
+            "minSelections": 1,
+            "maxSelections": 2,
+            "options": [
+              {
+                "id": "64b1f2c3e4b0a1234567ae10",
+                "name": "Vanilla",
+                "additionalPrice": "0.00"
+              },
+              {
+                "id": "64b1f2c3e4b0a1234567ae11",
+                "name": "Salted Caramel",
+                "additionalPrice": "0.50"
+              },
+              {
+                "id": "64b1f2c3e4b0a1234567ae12",
+                "name": "Strawberry",
+                "additionalPrice": "0.50"
+              }
+            ]
+          }
+        ],
+        "createdAt": "2024-06-15T12:00:00.000Z",
+        "updatedAt": "2024-06-15T13:45:00.000Z"
+      }
+    }
+  },
+  "deleteMenuItem": {
+    "method": "DELETE",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}/items/{itemId}",
+    "responses": {
+      "204": null
+    }
+  },
+  "toggleMenuItemAvailability": {
+    "method": "PATCH",
+    "path": "/restaurants/{restaurantId}/menu-categories/{categoryId}/items/{itemId}/availability",
+    "request": {
+      "isAvailable": false
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f2c3e4b0a1234567ac10",
+        "categoryRef": "64b1f2c3e4b0a1234567ab03",
+        "restaurantRef": "64b1f2c3e4b0a1234567ab00",
+        "name": "Chocolate Lava Cake (Large)",
+        "description": "Larger warm chocolate cake with a molten centre, served with two scoops of ice cream",
+        "price": "9.50",
+        "imageUrl": "https://cdn.example.com/items/lava-cake-large.jpg",
+        "isAvailable": false,
+        "sortOrder": 1,
+        "optionGroups": [
+          {
+            "id": "64b1f2c3e4b0a1234567ad10",
+            "name": "Ice Cream Flavour",
+            "isRequired": true,
+            "minSelections": 1,
+            "maxSelections": 2,
+            "options": [
+              {
+                "id": "64b1f2c3e4b0a1234567ae10",
+                "name": "Vanilla",
+                "additionalPrice": "0.00"
+              },
+              {
+                "id": "64b1f2c3e4b0a1234567ae11",
+                "name": "Salted Caramel",
+                "additionalPrice": "0.50"
+              },
+              {
+                "id": "64b1f2c3e4b0a1234567ae12",
+                "name": "Strawberry",
+                "additionalPrice": "0.50"
+              }
+            ]
+          }
+        ],
+        "createdAt": "2024-06-15T12:00:00.000Z",
+        "updatedAt": "2024-06-15T14:20:00.000Z"
+      }
+    }
+  },
+  "getCart": {
+    "method": "GET",
+    "path": "/cart",
+    "responses": {
+      "200": {
+        "id": "64b1f0e2a3c2d5e6f7890abc",
+        "customerRef": "64a0e1d2b3c4d5e6f7890001",
+        "restaurantRef": "64a0e1d2b3c4d5e6f7890002",
+        "fulfillmentType": "delivery",
+        "deliveryAddressId": "64a0e1d2b3c4d5e6f7890010",
+        "items": [
+          {
+            "menuItemId": "64a0e1d2b3c4d5e6f7890020",
+            "name": "Margherita Pizza",
+            "quantity": 2,
+            "unitPrice": "12.99",
+            "selectedOptions": [
+              {
+                "groupName": "Size",
+                "optionName": "Large",
+                "additionalPrice": "2.00"
+              }
+            ],
+            "lineTotal": "29.98"
+          },
+          {
+            "menuItemId": "64a0e1d2b3c4d5e6f7890021",
+            "name": "Caesar Salad",
+            "quantity": 1,
+            "unitPrice": "8.49",
+            "selectedOptions": [],
+            "lineTotal": "8.49"
+          }
+        ],
+        "subtotal": "38.47",
+        "taxAmount": "3.08",
+        "deliveryFee": "2.99",
+        "total": "44.54",
+        "expiresAt": "2024-07-15T14:30:00.000Z",
+        "createdAt": "2024-07-15T13:30:00.000Z",
+        "updatedAt": "2024-07-15T13:45:00.000Z"
+      }
+    }
+  },
+  "upsertCartItem": {
+    "method": "PUT",
+    "path": "/cart/items",
+    "request": {
+      "restaurantId": "64a0e1d2b3c4d5e6f7890002",
+      "menuItemId": "64a0e1d2b3c4d5e6f7890020",
+      "quantity": 2,
+      "selectedOptions": [
+        {
+          "groupName": "Size",
+          "optionName": "Large",
+          "additionalPrice": "2.00"
+        }
+      ]
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f0e2a3c2d5e6f7890abc",
+        "customerRef": "64a0e1d2b3c4d5e6f7890001",
+        "restaurantRef": "64a0e1d2b3c4d5e6f7890002",
+        "fulfillmentType": "delivery",
+        "deliveryAddressId": "64a0e1d2b3c4d5e6f7890010",
+        "items": [
+          {
+            "menuItemId": "64a0e1d2b3c4d5e6f7890020",
+            "name": "Margherita Pizza",
+            "quantity": 2,
+            "unitPrice": "12.99",
+            "selectedOptions": [
+              {
+                "groupName": "Size",
+                "optionName": "Large",
+                "additionalPrice": "2.00"
+              }
+            ],
+            "lineTotal": "29.98"
+          }
+        ],
+        "subtotal": "29.98",
+        "taxAmount": "2.40",
+        "deliveryFee": "2.99",
+        "total": "35.37",
+        "expiresAt": "2024-07-15T14:30:00.000Z",
+        "createdAt": "2024-07-15T13:30:00.000Z",
+        "updatedAt": "2024-07-15T13:50:00.000Z"
+      }
+    }
+  },
+  "removeCartItem": {
+    "method": "DELETE",
+    "path": "/cart/items/{menuItemId}",
+    "responses": {
+      "200": {
+        "id": "64b1f0e2a3c2d5e6f7890abc",
+        "customerRef": "64a0e1d2b3c4d5e6f7890001",
+        "restaurantRef": "64a0e1d2b3c4d5e6f7890002",
+        "fulfillmentType": "delivery",
+        "deliveryAddressId": "64a0e1d2b3c4d5e6f7890010",
+        "items": [
+          {
+            "menuItemId": "64a0e1d2b3c4d5e6f7890021",
+            "name": "Caesar Salad",
+            "quantity": 1,
+            "unitPrice": "8.49",
+            "selectedOptions": [],
+            "lineTotal": "8.49"
+          }
+        ],
+        "subtotal": "8.49",
+        "taxAmount": "0.68",
+        "deliveryFee": "2.99",
+        "total": "12.16",
+        "expiresAt": "2024-07-15T14:30:00.000Z",
+        "createdAt": "2024-07-15T13:30:00.000Z",
+        "updatedAt": "2024-07-15T13:55:00.000Z"
+      }
+    }
+  },
+  "clearCart": {
+    "method": "DELETE",
+    "path": "/cart",
+    "responses": {
+      "204": null
+    }
+  },
+  "setCartFulfillment": {
+    "method": "PATCH",
+    "path": "/cart/fulfillment",
+    "request": {
+      "fulfillmentType": "delivery",
+      "deliveryAddressId": "64a0e1d2b3c4d5e6f7890010"
+    },
+    "responses": {
+      "200": {
+        "id": "64b1f0e2a3c2d5e6f7890abc",
+        "customerRef": "64a0e1d2b3c4d5e6f7890001",
+        "restaurantRef": "64a0e1d2b3c4d5e6f7890002",
+        "fulfillmentType": "delivery",
+        "deliveryAddressId": "64a0e1d2b3c4d5e6f7890010",
+        "items": [
+          {
+            "menuItemId": "64a0e1d2b3c4d5e6f7890020",
+            "name": "Margherita Pizza",
+            "quantity": 2,
+            "unitPrice": "12.99",
+            "selectedOptions": [
+              {
+                "groupName": "Size",
+                "optionName": "Large",
+                "additionalPrice": "2.00"
+              }
+            ],
+            "lineTotal": "29.98"
+          }
+        ],
+        "subtotal": "29.98",
+        "taxAmount": "2.40",
+        "deliveryFee": "2.99",
+        "total": "35.37",
+        "expiresAt": "2024-07-15T14:30:00.000Z",
+        "createdAt": "2024-07-15T13:30:00.000Z",
+        "updatedAt": "2024-07-15T14:00:00.000Z"
+      }
+    }
+  },
+  "createOrder": {
+    "method": "POST",
+    "path": "/orders",
+    "request": {
+      "restaurantId": "64b1f2c3d4e5f6a7b8c9d0e1",
+      "fulfillmentType": "delivery",
+      "deliveryAddressId": "64b1f2c3d4e5f6a7b8c9d0e2",
+      "paymentMethod": "card",
+      "gatewayPaymentToken": "tok_visa_4242"
+    },
+    "responses": {
+      "201": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "pendingRestaurantAcceptance",
+        "fulfillmentType": "delivery",
+        "deliveryAddress": {
+          "line1": "12 Oak Street",
+          "city": "Springfield",
+          "state": "IL",
+          "postalCode": "62701",
+          "country": "US"
+        },
+        "items": [
+          {
+            "menuItemId": "64b1f2c3d4e5f6a7b8c9d0f1",
+            "name": "Margherita Pizza",
+            "quantity": 2,
+            "unitPrice": "12.99",
+            "options": [],
+            "lineTotal": "25.98"
+          },
+          {
+            "menuItemId": "64b1f2c3d4e5f6a7b8c9d0f2",
+            "name": "Tiramisu",
+            "quantity": 1,
+            "unitPrice": "6.50",
+            "options": [],
+            "lineTotal": "6.50"
+          }
+        ],
+        "subtotal": "32.48",
+        "taxAmount": "2.92",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "39.89",
+        "commissionRate": 0.15,
+        "commissionAmount": "4.87",
+        "settlementAmount": "27.61",
+        "paymentRef": "64c2a3b4c5d6e7f8a9b0c1d3",
+        "hasReview": false,
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:23:00Z"
+      }
+    }
+  },
+  "listOrders": {
+    "method": "GET",
+    "path": "/orders",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+            "orderNumber": "ORD-20240715-00042",
+            "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+            "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+            "restaurantName": "Bella Italia",
+            "status": "preparing",
+            "fulfillmentType": "delivery",
+            "total": "39.89",
+            "hasReview": false,
+            "createdAt": "2024-07-15T10:23:00Z",
+            "updatedAt": "2024-07-15T10:31:00Z"
+          },
+          {
+            "id": "64c2a3b4c5d6e7f8a9b0c1d9",
+            "orderNumber": "ORD-20240714-00039",
+            "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+            "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+            "restaurantName": "Bella Italia",
+            "status": "delivered",
+            "fulfillmentType": "pickup",
+            "total": "18.50",
+            "hasReview": true,
+            "createdAt": "2024-07-14T18:05:00Z",
+            "updatedAt": "2024-07-14T18:55:00Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  "getOrder": {
+    "method": "GET",
+    "path": "/orders/{orderId}",
+    "responses": {
+      "200": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "outForDelivery",
+        "fulfillmentType": "delivery",
+        "deliveryAddress": {
+          "line1": "12 Oak Street",
+          "city": "Springfield",
+          "state": "IL",
+          "postalCode": "62701",
+          "country": "US"
+        },
+        "items": [
+          {
+            "menuItemId": "64b1f2c3d4e5f6a7b8c9d0f1",
+            "name": "Margherita Pizza",
+            "quantity": 2,
+            "unitPrice": "12.99",
+            "options": [],
+            "lineTotal": "25.98"
+          }
+        ],
+        "subtotal": "25.98",
+        "taxAmount": "2.34",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "32.81",
+        "commissionRate": 0.15,
+        "commissionAmount": "3.90",
+        "settlementAmount": "22.08",
+        "paymentRef": "64c2a3b4c5d6e7f8a9b0c1d3",
+        "deliveryRef": "64c2a3b4c5d6e7f8a9b0c1d4",
+        "reviewRef": null,
+        "hasReview": false,
+        "acceptedAt": "2024-07-15T10:27:00Z",
+        "preparedAt": "2024-07-15T10:45:00Z",
+        "readyAt": "2024-07-15T10:50:00Z",
+        "deliveredAt": null,
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          },
+          {
+            "status": "accepted",
+            "changedAt": "2024-07-15T10:27:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          },
+          {
+            "status": "preparing",
+            "changedAt": "2024-07-15T10:32:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          },
+          {
+            "status": "ready",
+            "changedAt": "2024-07-15T10:50:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          },
+          {
+            "status": "outForDelivery",
+            "changedAt": "2024-07-15T10:58:00Z",
+            "changedBy": "64c2a3b4c5d6e7f8a9b0c1d6"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:58:00Z"
+      }
+    }
+  },
+  "cancelOrder": {
+    "method": "POST",
+    "path": "/orders/{orderId}/cancel",
+    "request": {
+      "reason": "I ordered by mistake and no longer need this."
+    },
+    "responses": {
+      "200": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "cancelledByCustomer",
+        "fulfillmentType": "delivery",
+        "subtotal": "32.48",
+        "taxAmount": "2.92",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "39.89",
+        "commissionRate": 0.15,
+        "commissionAmount": "4.87",
+        "settlementAmount": "27.61",
+        "hasReview": false,
+        "cancellationReason": "I ordered by mistake and no longer need this.",
+        "cancellationCharged": false,
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          },
+          {
+            "status": "cancelledByCustomer",
+            "changedAt": "2024-07-15T10:25:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:25:00Z"
+      }
+    }
+  },
+  "acceptOrder": {
+    "method": "POST",
+    "path": "/orders/{orderId}/accept",
+    "request": {
+      "estimatedPrepTimeMinutes": 20
+    },
+    "responses": {
+      "200": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "accepted",
+        "fulfillmentType": "delivery",
+        "subtotal": "32.48",
+        "taxAmount": "2.92",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "39.89",
+        "commissionRate": 0.15,
+        "commissionAmount": "4.87",
+        "settlementAmount": "27.61",
+        "hasReview": false,
+        "acceptedAt": "2024-07-15T10:27:00Z",
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          },
+          {
+            "status": "accepted",
+            "changedAt": "2024-07-15T10:27:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:27:00Z"
+      }
+    }
+  },
+  "rejectOrder": {
+    "method": "POST",
+    "path": "/orders/{orderId}/reject",
+    "request": {
+      "rejectionReason": "We are out of key ingredients for this order."
+    },
+    "responses": {
+      "200": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "cancelledByRestaurant",
+        "fulfillmentType": "delivery",
+        "subtotal": "32.48",
+        "taxAmount": "2.92",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "39.89",
+        "commissionRate": 0.15,
+        "commissionAmount": "4.87",
+        "settlementAmount": "27.61",
+        "hasReview": false,
+        "rejectionReason": "We are out of key ingredients for this order.",
+        "cancellationCharged": false,
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          },
+          {
+            "status": "cancelledByRestaurant",
+            "changedAt": "2024-07-15T10:28:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:28:00Z"
+      }
+    }
+  },
+  "advanceOrderStatus": {
+    "method": "POST",
+    "path": "/orders/{orderId}/advance",
+    "request": {
+      "targetStatus": "preparing"
+    },
+    "responses": {
+      "200": {
+        "id": "64c2a3b4c5d6e7f8a9b0c1d2",
+        "orderNumber": "ORD-20240715-00042",
+        "customerRef": "64b1f2c3d4e5f6a7b8c9d0e0",
+        "restaurantRef": "64b1f2c3d4e5f6a7b8c9d0e1",
+        "restaurantName": "Bella Italia",
+        "status": "preparing",
+        "fulfillmentType": "delivery",
+        "subtotal": "32.48",
+        "taxAmount": "2.92",
+        "deliveryFee": "2.99",
+        "serviceFee": "1.50",
+        "total": "39.89",
+        "commissionRate": 0.15,
+        "commissionAmount": "4.87",
+        "settlementAmount": "27.61",
+        "hasReview": false,
+        "acceptedAt": "2024-07-15T10:27:00Z",
+        "preparedAt": "2024-07-15T10:32:00Z",
+        "statusHistory": [
+          {
+            "status": "pendingRestaurantAcceptance",
+            "changedAt": "2024-07-15T10:23:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e0"
+          },
+          {
+            "status": "accepted",
+            "changedAt": "2024-07-15T10:27:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          },
+          {
+            "status": "preparing",
+            "changedAt": "2024-07-15T10:32:00Z",
+            "changedBy": "64b1f2c3d4e5f6a7b8c9d0e5"
+          }
+        ],
+        "createdAt": "2024-07-15T10:23:00Z",
+        "updatedAt": "2024-07-15T10:32:00Z"
+      }
+    }
+  },
+  "getPayment": {
+    "method": "GET",
+    "path": "/payments/{paymentId}",
+    "responses": {
+      "200": {
+        "id": "pay_9f3c2a1b4d7e6f05",
+        "orderRef": "ord_4c8e2f1a9b3d7e06",
+        "customerRef": "usr_1a2b3c4d5e6f7890",
+        "amount": "42.75",
+        "currency": "USD",
+        "method": "card",
+        "status": "captured",
+        "gatewayTransactionId": "ch_3NkLmQ2eZvKYlo2C1a2B3cDe",
+        "gatewayPaymentToken": "tok_visa_4242",
+        "gatewayResponse": {
+          "brand": "visa",
+          "last4": "4242",
+          "expMonth": 12,
+          "expYear": 2026,
+          "network": "Visa"
+        },
+        "authorizedAt": "2024-03-15T10:22:00Z",
+        "capturedAt": "2024-03-15T10:22:45Z",
+        "refunds": [],
+        "isCodCollected": false,
+        "createdAt": "2024-03-15T10:21:55Z",
+        "updatedAt": "2024-03-15T10:22:45Z"
+      }
+    }
+  },
+  "adminListPayments": {
+    "method": "GET",
+    "path": "/payments",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "pay_9f3c2a1b4d7e6f05",
+            "orderRef": "ord_4c8e2f1a9b3d7e06",
+            "customerRef": "usr_1a2b3c4d5e6f7890",
+            "amount": "42.75",
+            "currency": "USD",
+            "method": "card",
+            "status": "captured",
+            "gatewayTransactionId": "ch_3NkLmQ2eZvKYlo2C1a2B3cDe",
+            "gatewayPaymentToken": "tok_visa_4242",
+            "gatewayResponse": {
+              "brand": "visa",
+              "last4": "4242",
+              "expMonth": 12,
+              "expYear": 2026
+            },
+            "authorizedAt": "2024-03-15T10:22:00Z",
+            "capturedAt": "2024-03-15T10:22:45Z",
+            "refunds": [],
+            "isCodCollected": false,
+            "createdAt": "2024-03-15T10:21:55Z",
+            "updatedAt": "2024-03-15T10:22:45Z"
+          },
+          {
+            "id": "pay_7a1d5f9c3b2e8d04",
+            "orderRef": "ord_2b7f4e1c8a5d3f09",
+            "customerRef": "usr_9c8d7e6f5a4b3210",
+            "amount": "18.50",
+            "currency": "USD",
+            "method": "cashOnDelivery",
+            "status": "captured",
+            "gatewayTransactionId": null,
+            "gatewayPaymentToken": null,
+            "gatewayResponse": null,
+            "authorizedAt": null,
+            "capturedAt": "2024-03-15T11:05:30Z",
+            "refunds": [],
+            "isCodCollected": true,
+            "createdAt": "2024-03-15T10:50:10Z",
+            "updatedAt": "2024-03-15T11:05:30Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 348,
+          "totalPages": 18
+        }
+      }
+    }
+  },
+  "issueRefund": {
+    "method": "POST",
+    "path": "/payments/{paymentId}/refund",
+    "request": {
+      "amount": "15.00",
+      "reason": "Customer reported missing items; partial refund approved after review.",
+      "disputeRef": "dsp_3e7a1c5b9f2d6e08"
+    },
+    "responses": {
+      "200": {
+        "id": "pay_9f3c2a1b4d7e6f05",
+        "orderRef": "ord_4c8e2f1a9b3d7e06",
+        "customerRef": "usr_1a2b3c4d5e6f7890",
+        "amount": "42.75",
+        "currency": "USD",
+        "method": "card",
+        "status": "partiallyRefunded",
+        "gatewayTransactionId": "ch_3NkLmQ2eZvKYlo2C1a2B3cDe",
+        "gatewayPaymentToken": "tok_visa_4242",
+        "gatewayResponse": {
+          "brand": "visa",
+          "last4": "4242",
+          "expMonth": 12,
+          "expYear": 2026
+        },
+        "authorizedAt": "2024-03-15T10:22:00Z",
+        "capturedAt": "2024-03-15T10:22:45Z",
+        "refunds": [
+          {
+            "id": "ref_6b2d4e8f1a9c3705",
+            "amount": "15.00",
+            "reason": "Customer reported missing items; partial refund approved after review.",
+            "gatewayRefundId": "re_3NkPqR2eZvKYlo2C9x8Y7wVu",
+            "issuedByRef": "usr_adminA1B2C3D4E5F6",
+            "disputeRef": "dsp_3e7a1c5b9f2d6e08",
+            "issuedAt": "2024-03-16T09:14:22Z"
+          }
+        ],
+        "isCodCollected": false,
+        "createdAt": "2024-03-15T10:21:55Z",
+        "updatedAt": "2024-03-16T09:14:22Z"
+      }
+    }
+  },
+  "getDelivery": {
+    "method": "GET",
+    "path": "/deliveries/{deliveryId}",
+    "responses": {
+      "200": {
+        "id": "dlv_9k2m4p7q1r",
+        "orderRef": "ord_3a8b1c5d9e",
+        "restaurantRef": "rst_7f2e4a6b0c",
+        "customerRef": "usr_1d3f5h7j9l",
+        "agentRef": "usr_2e4g6i8k0m",
+        "status": "outForDelivery",
+        "restaurantLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentCurrentLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.978,
+            40.755
+          ]
+        },
+        "agentLocationUpdatedAt": "2024-03-15T14:32:10Z",
+        "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+        "offeredAt": "2024-03-15T14:10:00Z",
+        "offerExpiresAt": "2024-03-15T14:12:00Z",
+        "acceptedAt": "2024-03-15T14:11:30Z",
+        "pickedUpAt": "2024-03-15T14:25:00Z",
+        "deliveredAt": null,
+        "proofOfDeliveryUrl": null,
+        "assignmentAttempts": [
+          {
+            "agentRef": "usr_2e4g6i8k0m",
+            "offeredAt": "2024-03-15T14:10:00Z",
+            "respondedAt": "2024-03-15T14:11:30Z",
+            "response": "accepted"
+          }
+        ],
+        "createdAt": "2024-03-15T14:09:45Z",
+        "updatedAt": "2024-03-15T14:32:10Z"
+      }
+    }
+  },
+  "agentRespondToJob": {
+    "method": "POST",
+    "path": "/deliveries/{deliveryId}/respond",
+    "request": {
+      "response": "accepted"
+    },
+    "responses": {
+      "200": {
+        "id": "dlv_9k2m4p7q1r",
+        "orderRef": "ord_3a8b1c5d9e",
+        "restaurantRef": "rst_7f2e4a6b0c",
+        "customerRef": "usr_1d3f5h7j9l",
+        "agentRef": "usr_2e4g6i8k0m",
+        "status": "agentAccepted",
+        "restaurantLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentCurrentLocation": null,
+        "agentLocationUpdatedAt": null,
+        "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+        "offeredAt": "2024-03-15T14:10:00Z",
+        "offerExpiresAt": "2024-03-15T14:12:00Z",
+        "acceptedAt": "2024-03-15T14:11:30Z",
+        "pickedUpAt": null,
+        "deliveredAt": null,
+        "proofOfDeliveryUrl": null,
+        "assignmentAttempts": [
+          {
+            "agentRef": "usr_2e4g6i8k0m",
+            "offeredAt": "2024-03-15T14:10:00Z",
+            "respondedAt": "2024-03-15T14:11:30Z",
+            "response": "accepted"
+          }
+        ],
+        "createdAt": "2024-03-15T14:09:45Z",
+        "updatedAt": "2024-03-15T14:11:30Z"
+      }
+    }
+  },
+  "updateAgentLocation": {
+    "method": "PATCH",
+    "path": "/deliveries/{deliveryId}/location",
+    "request": {
+      "latitude": 40.755,
+      "longitude": -73.978
+    },
+    "responses": {
+      "200": {
+        "id": "dlv_9k2m4p7q1r",
+        "orderRef": "ord_3a8b1c5d9e",
+        "restaurantRef": "rst_7f2e4a6b0c",
+        "customerRef": "usr_1d3f5h7j9l",
+        "agentRef": "usr_2e4g6i8k0m",
+        "status": "outForDelivery",
+        "restaurantLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentCurrentLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.978,
+            40.755
+          ]
+        },
+        "agentLocationUpdatedAt": "2024-03-15T14:32:10Z",
+        "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+        "offeredAt": "2024-03-15T14:10:00Z",
+        "offerExpiresAt": "2024-03-15T14:12:00Z",
+        "acceptedAt": "2024-03-15T14:11:30Z",
+        "pickedUpAt": "2024-03-15T14:25:00Z",
+        "deliveredAt": null,
+        "proofOfDeliveryUrl": null,
+        "assignmentAttempts": [],
+        "createdAt": "2024-03-15T14:09:45Z",
+        "updatedAt": "2024-03-15T14:32:10Z"
+      }
+    }
+  },
+  "confirmPickup": {
+    "method": "POST",
+    "path": "/deliveries/{deliveryId}/pickup",
+    "request": {
+      "currentLatitude": 40.7484,
+      "currentLongitude": -73.9857
+    },
+    "responses": {
+      "200": {
+        "id": "dlv_9k2m4p7q1r",
+        "orderRef": "ord_3a8b1c5d9e",
+        "restaurantRef": "rst_7f2e4a6b0c",
+        "customerRef": "usr_1d3f5h7j9l",
+        "agentRef": "usr_2e4g6i8k0m",
+        "status": "pickedUp",
+        "restaurantLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentCurrentLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "agentLocationUpdatedAt": "2024-03-15T14:25:00Z",
+        "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+        "offeredAt": "2024-03-15T14:10:00Z",
+        "offerExpiresAt": "2024-03-15T14:12:00Z",
+        "acceptedAt": "2024-03-15T14:11:30Z",
+        "pickedUpAt": "2024-03-15T14:25:00Z",
+        "deliveredAt": null,
+        "proofOfDeliveryUrl": null,
+        "assignmentAttempts": [],
+        "createdAt": "2024-03-15T14:09:45Z",
+        "updatedAt": "2024-03-15T14:25:00Z"
+      }
+    }
+  },
+  "completeDelivery": {
+    "method": "POST",
+    "path": "/deliveries/{deliveryId}/complete",
+    "request": {
+      "proofOfDeliveryUrl": "https://cdn.example.com/proof/dlv_9k2m4p7q1r_pod.jpg",
+      "currentLatitude": 40.7614,
+      "currentLongitude": -73.9712
+    },
+    "responses": {
+      "200": {
+        "id": "dlv_9k2m4p7q1r",
+        "orderRef": "ord_3a8b1c5d9e",
+        "restaurantRef": "rst_7f2e4a6b0c",
+        "customerRef": "usr_1d3f5h7j9l",
+        "agentRef": "usr_2e4g6i8k0m",
+        "status": "delivered",
+        "restaurantLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9857,
+            40.7484
+          ]
+        },
+        "deliveryLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentCurrentLocation": {
+          "type": "string",
+          "coordinates": [
+            -73.9712,
+            40.7614
+          ]
+        },
+        "agentLocationUpdatedAt": "2024-03-15T14:48:55Z",
+        "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+        "offeredAt": "2024-03-15T14:10:00Z",
+        "offerExpiresAt": "2024-03-15T14:12:00Z",
+        "acceptedAt": "2024-03-15T14:11:30Z",
+        "pickedUpAt": "2024-03-15T14:25:00Z",
+        "deliveredAt": "2024-03-15T14:48:55Z",
+        "proofOfDeliveryUrl": "https://cdn.example.com/proof/dlv_9k2m4p7q1r_pod.jpg",
+        "assignmentAttempts": [],
+        "createdAt": "2024-03-15T14:09:45Z",
+        "updatedAt": "2024-03-15T14:48:55Z"
+      }
+    }
+  },
+  "agentListDeliveries": {
+    "method": "GET",
+    "path": "/deliveries",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "dlv_9k2m4p7q1r",
+            "orderRef": "ord_3a8b1c5d9e",
+            "restaurantRef": "rst_7f2e4a6b0c",
+            "customerRef": "usr_1d3f5h7j9l",
+            "agentRef": "usr_2e4g6i8k0m",
+            "status": "delivered",
+            "restaurantLocation": {
+              "type": "string",
+              "coordinates": [
+                -73.9857,
+                40.7484
+              ]
+            },
+            "deliveryLocation": {
+              "type": "string",
+              "coordinates": [
+                -73.9712,
+                40.7614
+              ]
+            },
+            "agentCurrentLocation": {
+              "type": "string",
+              "coordinates": [
+                -73.9712,
+                40.7614
+              ]
+            },
+            "agentLocationUpdatedAt": "2024-03-15T14:48:55Z",
+            "estimatedArrivalAt": "2024-03-15T14:50:00Z",
+            "offeredAt": "2024-03-15T14:10:00Z",
+            "offerExpiresAt": "2024-03-15T14:12:00Z",
+            "acceptedAt": "2024-03-15T14:11:30Z",
+            "pickedUpAt": "2024-03-15T14:25:00Z",
+            "deliveredAt": "2024-03-15T14:48:55Z",
+            "proofOfDeliveryUrl": "https://cdn.example.com/proof/dlv_9k2m4p7q1r_pod.jpg",
+            "assignmentAttempts": [],
+            "createdAt": "2024-03-15T14:09:45Z",
+            "updatedAt": "2024-03-15T14:48:55Z"
+          },
+          {
+            "id": "dlv_1a3c5e7g9i",
+            "orderRef": "ord_4b9c2d6e0f",
+            "restaurantRef": "rst_8g3f5b7c1d",
+            "customerRef": "usr_5h7j9l1n3p",
+            "agentRef": "usr_2e4g6i8k0m",
+            "status": "failed",
+            "restaurantLocation": {
+              "type": "string",
+              "coordinates": [
+                -73.99,
+                40.74
+              ]
+            },
+            "deliveryLocation": {
+              "type": "string",
+              "coordinates": [
+                -73.965,
+                40.77
+              ]
+            },
+            "agentCurrentLocation": null,
+            "agentLocationUpdatedAt": null,
+            "estimatedArrivalAt": null,
+            "offeredAt": "2024-03-14T18:05:00Z",
+            "offerExpiresAt": "2024-03-14T18:07:00Z",
+            "acceptedAt": "2024-03-14T18:06:10Z",
+            "pickedUpAt": "2024-03-14T18:20:00Z",
+            "deliveredAt": null,
+            "proofOfDeliveryUrl": null,
+            "assignmentAttempts": [],
+            "createdAt": "2024-03-14T18:04:30Z",
+            "updatedAt": "2024-03-14T18:55:00Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  "createReview": {
+    "method": "POST",
+    "path": "/reviews",
+    "request": {
+      "orderRef": "664a1f2e8c3b2a001f4e8d01",
+      "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+      "rating": 4,
+      "comment": "Food was delicious and arrived hot. The packaging could be better but overall a great experience."
+    },
+    "responses": {
+      "201": {
+        "id": "664a2f3e9d4c3b002f5e9e02",
+        "orderRef": "664a1f2e8c3b2a001f4e8d01",
+        "customerRef": "664a1f2e8c3b2a001f4e8a05",
+        "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+        "rating": 4,
+        "comment": "Food was delicious and arrived hot. The packaging could be better but overall a great experience.",
+        "status": "published",
+        "removedByRef": null,
+        "removedAt": null,
+        "removalReason": null,
+        "createdAt": "2024-05-20T14:30:00.000Z",
+        "updatedAt": "2024-05-20T14:30:00.000Z"
+      }
+    }
+  },
+  "getReview": {
+    "method": "GET",
+    "path": "/reviews/{reviewId}",
+    "responses": {
+      "200": {
+        "id": "664a2f3e9d4c3b002f5e9e02",
+        "orderRef": "664a1f2e8c3b2a001f4e8d01",
+        "customerRef": "664a1f2e8c3b2a001f4e8a05",
+        "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+        "rating": 4,
+        "comment": "Food was delicious and arrived hot. The packaging could be better but overall a great experience.",
+        "status": "published",
+        "removedByRef": null,
+        "removedAt": null,
+        "removalReason": null,
+        "createdAt": "2024-05-20T14:30:00.000Z",
+        "updatedAt": "2024-05-20T14:30:00.000Z"
+      }
+    }
+  },
+  "adminListReviews": {
+    "method": "GET",
+    "path": "/reviews",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "664a2f3e9d4c3b002f5e9e02",
+            "orderRef": "664a1f2e8c3b2a001f4e8d01",
+            "customerRef": "664a1f2e8c3b2a001f4e8a05",
+            "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+            "rating": 4,
+            "comment": "Food was delicious and arrived hot.",
+            "status": "published",
+            "removedByRef": null,
+            "removedAt": null,
+            "removalReason": null,
+            "createdAt": "2024-05-20T14:30:00.000Z",
+            "updatedAt": "2024-05-20T14:30:00.000Z"
+          },
+          {
+            "id": "664a3a4f0e5d4c003g6f0f13",
+            "orderRef": "664a2a3d8b4c3b002e5d8c12",
+            "customerRef": "664a1f2e8c3b2a001f4e8a09",
+            "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+            "rating": 2,
+            "comment": "Order was late and food was cold.",
+            "status": "published",
+            "removedByRef": null,
+            "removedAt": null,
+            "removalReason": null,
+            "createdAt": "2024-05-19T10:15:00.000Z",
+            "updatedAt": "2024-05-19T10:15:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  "removeReview": {
+    "method": "POST",
+    "path": "/reviews/{reviewId}/remove",
+    "request": {
+      "removalReason": "Review contains hate speech and violates community guidelines."
+    },
+    "responses": {
+      "200": {
+        "id": "664a2f3e9d4c3b002f5e9e02",
+        "orderRef": "664a1f2e8c3b2a001f4e8d01",
+        "customerRef": "664a1f2e8c3b2a001f4e8a05",
+        "restaurantRef": "664a1f2e8c3b2a001f4e8b10",
+        "rating": 1,
+        "comment": "This place is terrible, avoid at all costs!!!",
+        "status": "removedByAdmin",
+        "removedByRef": "664a0e1d7b2a1a000e3d7c99",
+        "removedAt": "2024-05-21T09:00:00.000Z",
+        "removalReason": "Review contains hate speech and violates community guidelines.",
+        "createdAt": "2024-05-20T14:30:00.000Z",
+        "updatedAt": "2024-05-21T09:00:00.000Z"
+      }
+    }
+  },
+  "createDispute": {
+    "method": "POST",
+    "path": "/disputes",
+    "request": {
+      "orderRef": "664a1f9e2b3c4d5e6f700001",
+      "description": "I received the wrong items in my order. I ordered a Margherita pizza but received a Pepperoni pizza instead."
+    },
+    "responses": {
+      "201": {
+        "id": "664b2a3c4d5e6f7a8b900001",
+        "orderRef": "664a1f9e2b3c4d5e6f700001",
+        "customerRef": "663f8e1a2b3c4d5e6f000001",
+        "restaurantRef": "663e7d0a1b2c3d4e5f000002",
+        "description": "I received the wrong items in my order. I ordered a Margherita pizza but received a Pepperoni pizza instead.",
+        "status": "open",
+        "assignedAdminRef": null,
+        "resolutionNote": null,
+        "refundIssued": false,
+        "refundAmount": null,
+        "resolvedAt": null,
+        "resolvedByRef": null,
+        "createdAt": "2024-05-20T10:30:00.000Z",
+        "updatedAt": "2024-05-20T10:30:00.000Z"
+      }
+    }
+  },
+  "listDisputes": {
+    "method": "GET",
+    "path": "/disputes",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "664b2a3c4d5e6f7a8b900001",
+            "orderRef": "664a1f9e2b3c4d5e6f700001",
+            "customerRef": "663f8e1a2b3c4d5e6f000001",
+            "restaurantRef": "663e7d0a1b2c3d4e5f000002",
+            "description": "I received the wrong items in my order.",
+            "status": "open",
+            "assignedAdminRef": null,
+            "resolutionNote": null,
+            "refundIssued": false,
+            "refundAmount": null,
+            "resolvedAt": null,
+            "resolvedByRef": null,
+            "createdAt": "2024-05-20T10:30:00.000Z",
+            "updatedAt": "2024-05-20T10:30:00.000Z"
+          },
+          {
+            "id": "664b2a3c4d5e6f7a8b900002",
+            "orderRef": "664a1f9e2b3c4d5e6f700002",
+            "customerRef": "663f8e1a2b3c4d5e6f000001",
+            "restaurantRef": "663e7d0a1b2c3d4e5f000003",
+            "description": "Order was never delivered but marked as delivered.",
+            "status": "underReview",
+            "assignedAdminRef": "663f8e1a2b3c4d5e6f000099",
+            "resolutionNote": null,
+            "refundIssued": false,
+            "refundAmount": null,
+            "resolvedAt": null,
+            "resolvedByRef": null,
+            "createdAt": "2024-05-18T14:15:00.000Z",
+            "updatedAt": "2024-05-19T09:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 2,
+          "totalPages": 1
+        }
+      }
+    }
+  },
+  "getDispute": {
+    "method": "GET",
+    "path": "/disputes/{disputeId}",
+    "responses": {
+      "200": {
+        "id": "664b2a3c4d5e6f7a8b900001",
+        "orderRef": "664a1f9e2b3c4d5e6f700001",
+        "customerRef": "663f8e1a2b3c4d5e6f000001",
+        "restaurantRef": "663e7d0a1b2c3d4e5f000002",
+        "description": "I received the wrong items in my order. I ordered a Margherita pizza but received a Pepperoni pizza instead.",
+        "status": "underReview",
+        "assignedAdminRef": "663f8e1a2b3c4d5e6f000099",
+        "resolutionNote": null,
+        "refundIssued": false,
+        "refundAmount": null,
+        "resolvedAt": null,
+        "resolvedByRef": null,
+        "createdAt": "2024-05-20T10:30:00.000Z",
+        "updatedAt": "2024-05-21T08:45:00.000Z"
+      }
+    }
+  },
+  "resolveDispute": {
+    "method": "POST",
+    "path": "/disputes/{disputeId}/resolve",
+    "request": {
+      "status": "resolvedRefunded",
+      "resolutionNote": "Verified with restaurant that incorrect items were sent. Full refund issued to the customer.",
+      "refundIssued": true,
+      "refundAmount": "22.99"
+    },
+    "responses": {
+      "200": {
+        "id": "664b2a3c4d5e6f7a8b900001",
+        "orderRef": "664a1f9e2b3c4d5e6f700001",
+        "customerRef": "663f8e1a2b3c4d5e6f000001",
+        "restaurantRef": "663e7d0a1b2c3d4e5f000002",
+        "description": "I received the wrong items in my order. I ordered a Margherita pizza but received a Pepperoni pizza instead.",
+        "status": "resolvedRefunded",
+        "assignedAdminRef": "663f8e1a2b3c4d5e6f000099",
+        "resolutionNote": "Verified with restaurant that incorrect items were sent. Full refund issued to the customer.",
+        "refundIssued": true,
+        "refundAmount": "22.99",
+        "resolvedAt": "2024-05-22T11:00:00.000Z",
+        "resolvedByRef": "663f8e1a2b3c4d5e6f000099",
+        "createdAt": "2024-05-20T10:30:00.000Z",
+        "updatedAt": "2024-05-22T11:00:00.000Z"
+      }
+    }
+  },
+  "getPlatformConfig": {
+    "method": "GET",
+    "path": "/platform-config",
+    "responses": {
+      "200": {
+        "key": "global",
+        "defaultCommissionRate": 0.15,
+        "serviceFee": "1.99",
+        "defaultDeliveryRadiusKm": 10,
+        "sessionTokenTtlSeconds": 86400,
+        "accountLockDurationSeconds": 1800,
+        "agentOfferTimeoutSeconds": 60,
+        "cancellationChargePct": 0.1,
+        "maxFailedLoginAttempts": 5,
+        "updatedByRef": "64b1f2c3e4b0a1d2e3f45678",
+        "createdAt": "2024-01-10T08:00:00.000Z",
+        "updatedAt": "2024-06-15T14:32:00.000Z"
+      }
+    }
+  },
+  "updatePlatformConfig": {
+    "method": "PATCH",
+    "path": "/platform-config",
+    "request": {
+      "defaultCommissionRate": 0.18,
+      "serviceFee": "2.49",
+      "defaultDeliveryRadiusKm": 12,
+      "sessionTokenTtlSeconds": 43200,
+      "accountLockDurationSeconds": 3600,
+      "agentOfferTimeoutSeconds": 90,
+      "cancellationChargePct": 0.15,
+      "maxFailedLoginAttempts": 3
+    },
+    "responses": {
+      "200": {
+        "key": "global",
+        "defaultCommissionRate": 0.18,
+        "serviceFee": "2.49",
+        "defaultDeliveryRadiusKm": 12,
+        "sessionTokenTtlSeconds": 43200,
+        "accountLockDurationSeconds": 3600,
+        "agentOfferTimeoutSeconds": 90,
+        "cancellationChargePct": 0.15,
+        "maxFailedLoginAttempts": 3,
+        "updatedByRef": "64b1f2c3e4b0a1d2e3f45678",
+        "createdAt": "2024-01-10T08:00:00.000Z",
+        "updatedAt": "2024-07-20T09:15:00.000Z"
+      }
+    }
+  },
+  "listAuditLogs": {
+    "method": "GET",
+    "path": "/audit-logs",
+    "responses": {
+      "200": {
+        "data": [
+          {
+            "id": "664a1f3e2c4b5d0012f3a001",
+            "actorRef": "663e1a2b1c3d4e0011e2b001",
+            "action": "UPDATE_USER_STATUS",
+            "targetCollection": "users",
+            "targetId": "663e1a2b1c3d4e0011e2b099",
+            "previousValue": {
+              "status": "active"
+            },
+            "newValue": {
+              "status": "suspended"
+            },
+            "ipAddress": "203.0.113.42",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "createdAt": "2024-05-19T10:23:14.000Z"
+          },
+          {
+            "id": "664a1f3e2c4b5d0012f3a002",
+            "actorRef": "663e1a2b1c3d4e0011e2b001",
+            "action": "UPDATE_RESTAURANT_STATUS",
+            "targetCollection": "restaurants",
+            "targetId": "663e1a2b1c3d4e0011e2b200",
+            "previousValue": {
+              "status": "pendingApproval"
+            },
+            "newValue": {
+              "status": "active"
+            },
+            "ipAddress": "203.0.113.42",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "createdAt": "2024-05-19T09:11:05.000Z"
+          },
+          {
+            "id": "664a1f3e2c4b5d0012f3a003",
+            "actorRef": "663e1a2b1c3d4e0011e2b001",
+            "action": "RESOLVE_DISPUTE",
+            "targetCollection": "disputes",
+            "targetId": "663e1a2b1c3d4e0011e2b300",
+            "previousValue": {
+              "status": "underReview"
+            },
+            "newValue": {
+              "status": "resolvedRefunded",
+              "refundIssued": true,
+              "refundAmount": "12.50"
+            },
+            "ipAddress": "203.0.113.42",
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "createdAt": "2024-05-18T16:44:30.000Z"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "limit": 20,
+          "totalItems": 87,
+          "totalPages": 5
+        }
+      }
+    }
+  },
+  "getAuditLog": {
+    "method": "GET",
+    "path": "/audit-logs/{logId}",
+    "responses": {
+      "200": {
+        "id": "664a1f3e2c4b5d0012f3a001",
+        "actorRef": "663e1a2b1c3d4e0011e2b001",
+        "action": "UPDATE_PLATFORM_CONFIG",
+        "targetCollection": "platformconfigs",
+        "targetId": "663e1a2b1c3d4e0011e2b500",
+        "previousValue": {
+          "defaultCommissionRate": 0.15,
+          "serviceFee": "1.99",
+          "agentOfferTimeoutSeconds": 30,
+          "cancellationChargePct": 0.1
+        },
+        "newValue": {
+          "defaultCommissionRate": 0.18,
+          "serviceFee": "2.49",
+          "agentOfferTimeoutSeconds": 45,
+          "cancellationChargePct": 0.15
+        },
+        "ipAddress": "198.51.100.17",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "createdAt": "2024-05-20T08:05:22.000Z"
+      }
+    }
+  }
+}
