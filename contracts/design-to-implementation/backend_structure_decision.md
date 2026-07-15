@@ -1,200 +1,227 @@
 # Backend Structure — Design Decision
 
-## Domain-Driven Microservices with Shared Kernel
-Each independently deployable Express service owns its own routes, controllers, service logic, Mongoose models, and third-party adapter calls, grouped by business domain: auth-service, restaurant-service, order-service, payment-service, delivery-service, review-service, notification-service, admin-service, and search-service. A shared npm workspace package (shared-kernel) exports common Mongoose base schemas, JWT middleware, RBAC helpers, error classes, and validation utilities consumed by all services. A separate api-gateway entry point handles routing, rate-limiting, and token verification before proxying to the correct service.
+## Domain-Driven Microservice Modules (per-service feature ownership)
+Each independently deployable Express service (auth, catalog, ordering, payment, delivery, reviews, admin) lives in its own top-level directory under /services. Within each service the layout is flat: routes → controller → service-logic → repository (Mongoose model). Cross-cutting concerns (JWT middleware, RBAC, rate-limiting, error handler, shared Mongoose base schemas, notification client, mapping client, payment client) live in a /packages/shared library consumed by all services via Node path alias or local npm package. The API gateway config and socket.io real-time layer are separate top-level entries.
 
 **Pros**
-- Directly satisfies NFR-15 and the architectural constraint that search and ordering scale independently — each service is truly isolated and deployable without touching others.
-- Payment service can be PCI-scoped in isolation, minimising the audit surface for PCI DSS v4.0 compliance (NFR-10).
-- External provider failures (payment, mapping, messaging) are naturally contained within their owning service, directly satisfying NFR-17.
-- WebSocket (Socket.IO) namespace for real-time delivery tracking lives entirely inside delivery-service, keeping stateful concerns localised.
-- Teams can own a single service end-to-end; auth, ordering, and search teams work in parallel with minimal merge conflicts.
-- Each service can have its own MongoDB Atlas cluster or collection set, enabling independent schema evolution.
+- Directly mirrors the NFR-15 'independently deployable services' constraint — each service folder is a self-contained deployable unit with its own package.json, Dockerfile and env config
+- High-traffic services (catalog/search and ordering) can be scaled in isolation without touching auth or reviews, satisfying the gateway-plus-independent-scaling architectural constraint
+- PCI DSS isolation is natural: the payment service is a hard boundary; no other service ever touches raw card data or payment Mongoose models
+- Service boundaries map 1-to-1 to the four role-based portals and their data objects, making ownership and on-call responsibility unambiguous
+- NFR-17 (external provider failure isolation) is enforced structurally — the mapping client lives only inside delivery, messaging client only inside notifications, payment client only inside payment
+- New features for one domain (e.g. dispute management inside admin) do not require touching ordering or catalog code
 
 **Cons**
-- High initial scaffolding cost — nine services plus a gateway and a shared-kernel package is a lot of boilerplate for a v1.0 single-city launch.
-- Cross-service data consistency (e.g. order references a restaurant and a user from different services) requires careful design — either denormalisation into each document or inter-service HTTP calls that add latency and coupling.
-- The shared Mongoose models in shared-kernel create a hidden tight coupling: a schema change forces coordinated releases across every service that imports it, partially negating the independence benefit.
-- Operational complexity (service discovery, inter-service auth, distributed logging, health checks) is non-trivial to set up and maintain at an early-stage product.
-- Running nine Node processes locally during development is resource-intensive and slows developer feedback cycles.
+- Highest initial scaffolding cost: each service needs its own Express bootstrap, middleware wiring, health-check, and CI pipeline entry
+- The shared Mongoose models package must be versioned carefully; a schema change to Order requires coordinating ordering, delivery, admin, and payment services
+- Inter-service calls (e.g. ordering service needs restaurant availability from catalog) introduce HTTP or event overhead that would be a simple import in a monolith
+- Local development requires running 6-7 Node processes simultaneously, increasing developer-machine complexity
+- Risk of shared-package becoming a hidden monolith: if Mongoose schemas are truly shared, a breaking schema migration still propagates across all services
 
-## Monolithic Layered Architecture (MVC + Service + Repository)
-A single Express application with strict horizontal layers: routes → controllers → services → repositories → Mongoose models. Cross-cutting concerns (auth middleware, RBAC, rate-limit, error handling, Socket.IO hub, third-party adapters) live in dedicated top-level folders (middleware/, adapters/, config/, utils/). All Mongoose schemas are co-located in a models/ directory. The four role portals share the same process, differentiated only by RBAC middleware guards on their route groups.
+## Layered Monorepo Monolith (technical-role layers, all services in one Express app)
+A single Express application with strictly enforced technical layers: /src/routes, /src/controllers, /src/services, /src/repositories, /src/models (Mongoose), /src/middleware, /src/config, /src/integrations (payment, mapping, messaging), /src/sockets. Each layer is a flat namespace; file names carry the domain prefix (order.controller.js, order.service.js). The API gateway becomes a thin nginx/Kong proxy in front of this single process. Real-time Socket.IO is mounted directly on the same Express HTTP server.
 
 **Pros**
-- Fastest to build and iterate at v1.0 single-city scope — one codebase, one deployment, straightforward local development.
-- No inter-service network calls; all data access goes through in-process repository calls, keeping queries simple and latency low.
-- MongoDB document model with Mongoose fits a layered monolith well — each collection maps to a model file and a repository class with no cross-service schema sharing concerns.
-- Single Socket.IO instance trivially supports real-time order and delivery events across all connected clients.
-- Easier to enforce consistent RBAC, audit logging (AdminAuditLog), and rate-limiting in a single middleware chain.
+- Lowest bootstrapping effort — one package.json, one process, one MongoDB connection pool, one deployment unit; ideal for a v1.0 launch in a single metro area
+- Refactoring across domains (e.g. moving order status logic that also touches delivery) is a single-repo file move with no inter-service contracts to update
+- Mongoose model sharing is trivial and safe since there is only one runtime; no schema versioning across service boundaries
+- Full-stack traces in a single log stream simplify debugging during early operations
+- Socket.IO real-time layer shares the same process and can emit events synchronously from the order service without a message broker
 
 **Cons**
-- Violates the explicit architectural constraint requiring independently deployable services for search and ordering scalability; horizontal scaling means replicating the entire monolith.
-- As the codebase grows across four portals and nine domain objects, the shared layers (especially services/ and models/) become large and cognitively expensive to navigate.
-- Any change to a high-risk area (payment adapter, auth middleware) requires a full redeploy of the platform, increasing blast radius.
-- PCI DSS scoping is harder — the entire monolith is in scope rather than just an isolated payment service.
-- NFR-17 (provider failure isolation) must be achieved entirely through software patterns (circuit breakers, try/catch boundaries) with no process-level isolation.
+- Violates NFR-15 and the explicit architectural constraint that search/ordering must scale independently — the entire monolith must be scaled together, wasting resources on low-traffic admin functions
+- A bug or memory leak in the admin or reviews module can crash ordering and payment for all customers, breaking NFR-13 (99.9% uptime for customer-facing ordering)
+- PCI DSS audit scope bleeds across the whole codebase; every developer and deployment touches payment code, increasing compliance surface
+- As the team grows, merge conflicts across the flat /services and /controllers namespaces become frequent
+- Migrating to independently deployable services later (when traffic demands it) requires significant refactoring investment
 
-## Feature-Modular Monorepo (Modular Monolith with Deployment Seams)
-A single Node.js monorepo (e.g. pnpm workspaces) containing one deployable Express application whose internals are partitioned into feature modules — auth, restaurants, menus, cart, orders, payments, delivery, reviews, notifications, admin — each module owning its router, controller, service, Mongoose models/repositories, and any module-specific adapter wrappers inside its own directory. Cross-cutting concerns (config, JWT/RBAC middleware, error handling, Socket.IO setup, shared Mongoose connection, base adapter clients) live in a top-level shared/ package. The gateway is a thin Express entry point that mounts each module's router. Because module boundaries are strictly enforced (no module imports another module's internals directly — only through exported service interfaces), the seams exist to extract a module into a true microservice later without rewrites.
+## Modular Monolith with Extracted High-Traffic Services (hybrid bounded-context approach)
+Three deployment units share one git monorepo under /services: (1) core-api — a single Express app owning auth, restaurant-catalog, cart, reviews, admin, and disputes with internal feature modules (each module has its own routes/, controller.js, service.js, repository.js, and *.model.js under /services/core-api/src/modules/<domain>/); (2) ordering-service — standalone Express + Socket.IO service owning the Order, Payment, and Delivery lifecycles where real-time and scaling demands are highest; (3) api-gateway — thin Express-http-proxy/Kong config. Cross-cutting packages (JWT auth, RBAC middleware, rate-limiter, error handler, notification client, mapping client, payment client, shared Mongoose base plugin) live in /packages/* and are referenced as local workspace packages (npm/yarn workspaces). Each service has its own MongoDB connection but uses the shared model definitions from /packages/db-models.
 
 **Pros**
-- Balances v1.0 delivery speed with the architectural constraint: the entire app runs as one process today but the module boundaries make it straightforward to split high-traffic modules (orders, search) into separate services when traffic demands it, satisfying NFR-15 without premature complexity.
-- Each feature module is self-contained — its Mongoose schema, business rules, and adapter calls are co-located, making the code easy to find and own by a small team without monolithic layer sprawl.
-- RBAC middleware, rate-limiting, audit logging (AdminAuditLog), and PCI-adjacent payment adapter code each live in exactly one place (shared/ or the payments module), making security NFRs straightforward to audit.
-- Single Socket.IO instance is simple to configure in shared/ and injected into the delivery module for real-time tracking, avoiding the distributed WebSocket complexity of full microservices.
-- MongoDB document model maps cleanly — each module owns its Mongoose models and can embed related sub-documents (e.g. Menu items inside Restaurant) without cross-service schema leakage.
-- One deployment pipeline, one set of environment variables, and one local dev server for v1.0; module extraction later requires only adding a new service entry point and an API gateway rule, not rewriting business logic.
-- Admin portal concerns (audit log, platform config, disputes) are cleanly isolated in the admin module without polluting other modules.
+- Satisfies the independent-scaling constraint precisely where it matters: ordering + payment + delivery (the hot path) runs in its own process and can be horizontally scaled without touching catalog or admin
+- PCI DSS audit scope is narrowed to ordering-service and the payment integration package — a small, reviewable surface
+- Feature modules inside core-api give clear domain ownership without the 6-7 process local-dev overhead of full microservices; one npm start per service (2 backend processes total)
+- NFR-17 failure isolation: ordering-service outage does not take down restaurant browsing or admin; catalog outage does not affect in-flight orders already placed
+- Real-time Socket.IO collocated with ordering-service means order and delivery WebSocket events are emitted in-process without a message broker for v1.0
+- Shared /packages/db-models with Mongoose schemas gives a single source of truth for data shapes while each service owns its own connection pool and migration cadence
+- Monorepo workspace tooling (npm workspaces / turborepo) gives unified linting, testing, and CI without duplicating config six times
+- Feature module structure (domain folder with own routes, controller, service, repository, model) makes it straightforward to extract a module into its own service later if load warrants it
 
 **Cons**
-- Requires discipline to enforce module boundaries in JavaScript/TypeScript — without tooling (e.g. ESLint import rules or NX boundary checks) developers will inadvertently cross-import between modules, eroding the architecture over time.
-- Still a single process: a catastrophic bug in one module (e.g. a memory leak in order processing) can degrade the entire application until extraction is done.
-- The shared/ package can become a dumping ground for miscellaneous utilities if not actively governed, recreating the 'big ball of mud' problem inside a different folder.
-- Slightly more initial structure than a pure layered monolith, which could slow the very earliest days of development before the team has established the module scaffold pattern.
+- Slightly more initial setup than a pure monolith: workspace config, two Dockerfiles, gateway routing rules, and inter-service HTTP calls between core-api and ordering-service for admin order lookup
+- Shared /packages/db-models still requires coordinated migrations when Order or Delivery schema changes affect both services; must enforce a backwards-compatible migration discipline
+- Socket.IO in ordering-service means if the customer app is connected to a core-api load-balanced instance for catalog then switches to ordering-service for real-time tracking, the client must connect to two origins (mitigated by routing at the gateway level)
+- Team must agree on and enforce module boundaries inside core-api; without discipline the modules can become coupled, defeating the purpose
 
-## Chosen: Feature-Modular Monorepo (Modular Monolith with Deployment Seams)
-QuickBite v1.0 is a single-city launch with a small team that needs to move fast, yet the explicit architectural constraint demands independently scalable services for search and ordering, and NFR-15 requires that a change to one service not force a full redeploy. Full microservices satisfy scalability but impose enormous operational and scaffolding overhead for a first release, and the shared Mongoose schema problem negates much of the independence. A pure layered monolith is fastest to start but directly violates the scaling constraint and makes PCI scoping harder. The feature-modular approach threads the needle: each domain (auth, restaurants, orders, payments, delivery, reviews, notifications, admin) is a self-contained module with its own router, service, Mongoose models, and adapter wrappers, all enforced by strict import boundaries. The entire platform ships as one deployable Express process for v1.0, giving fast iteration and simple Socket.IO real-time delivery tracking. When order or search traffic demands independent scaling, the module's index exports are already the seam — a new Express entry point mounts only that module's router and the API gateway adds one routing rule, with zero business logic rewritten. Security NFRs (RBAC, rate-limiting, audit logging, PCI-scoped payment adapter) live in shared/ and the payments module respectively, keeping the audit surface small and the enforcement uniform.
+## Chosen: Modular Monolith with Extracted High-Traffic Services (hybrid bounded-context approach)
+QuickBite v1.0 has an explicit architectural constraint to independently scale search and ordering, a PCI DSS obligation that demands a narrow payment code surface, and a real-time WebSocket requirement tightly coupled to the order lifecycle — all of which the pure layered monolith fails to address. Full microservices satisfy those constraints but impose disproportionate operational overhead for a single-metro launch with a team that is still establishing domain boundaries. The hybrid approach extracts exactly the two high-pressure concerns (ordering + payment + delivery into ordering-service) while keeping the lower-traffic, lower-risk domains (auth, catalog, admin, reviews) as well-structured feature modules inside core-api. This gives independent scaling and PCI scope isolation where they matter most, keeps local development to two backend processes, and creates a clear extraction path for any module that later needs its own service. The monorepo workspace with /packages/db-models and shared middleware packages prevents duplication without creating a hidden runtime dependency — each service retains its own connection pool and deploy cadence.
 
 ## Resulting layout
 ```
-package.json  — root dependencies and npm scripts (start, dev, test, lint)
-package-lock.json  — locked dependency tree
-.env.example  — documented environment variable template
-.eslintrc.js  — ESLint config enforcing import boundaries between modules
-.prettierrc  — code style config
-jest.config.js  — Jest root config with per-module test projects
-Dockerfile  — production container image definition
-docker-compose.yml  — local dev stack: app + MongoDB
-src/
-  server.js  — Express app factory — mounts API gateway router, Socket.IO, and graceful-shutdown logic
-  app.js  — creates and exports the configured Express application instance
-  socket.js  — Socket.IO server initialization and room/event registration for order and delivery updates
-  config/
-    index.js  — centralised config loader — reads and validates env vars via joi/zod, exports typed config object
-    db.js  — Mongoose connection factory with retry logic and connection-event logging
-    rateLimiter.js  — express-rate-limit presets (auth, payment, general API)
-  shared/
-    models/
-      User.model.js  — Mongoose schema/model for User (all roles, bcrypt password hook, role enum)
-      Restaurant.model.js  — Mongoose schema/model for Restaurant (location, delivery radius, hours, status)
-      Menu.model.js  — Mongoose schema/model for Menu categories and items (allergens, dietary flags, availability)
-      Cart.model.js  — Mongoose schema/model for Cart (userId ref, line items, expiry TTL index)
-      Order.model.js  — Mongoose schema/model for Order (status state machine, embedded snapshot of items and prices)
-      Payment.model.js  — Mongoose schema/model for Payment (gateway token, status, no raw card fields)
-      Delivery.model.js  — Mongoose schema/model for Delivery (agentId ref, status, location history, ETA)
-      Review.model.js  — Mongoose schema/model for Review (orderId ref, ratings, text, moderation status)
-      PlatformConfig.model.js  — Mongoose schema/model for PlatformConfig (singleton-style key-value operational settings)
-      AdminAuditLog.model.js  — Mongoose schema/model for AdminAuditLog (actor, action, entity, timestamp, diff)
-    middleware/
-      authenticate.js  — JWT verification middleware — attaches decoded user to req.user
-      authorize.js  — RBAC middleware factory — authorize(roles[]) returns Express middleware
-      auditLog.js  — middleware/helper that writes AdminAuditLog entries for privileged mutations
-      rateLimiters.js  — exports named rate-limiter middleware instances from config/rateLimiter.js
-      requestLogger.js  — HTTP request/response logger (morgan or pino-http)
-      errorHandler.js  — global Express error-handling middleware — formats and returns RFC 7807 errors
-      notFound.js  — catch-all 404 handler mounted after all routers
-      validateBody.js  — generic request-body validation middleware factory wrapping Joi/Zod schemas
-    utils/
-      jwt.js  — sign and verify JWT access and refresh tokens
-      password.js  — bcrypt hash and compare helpers
-      paginate.js  — MongoDB skip/limit pagination helper
-      asyncHandler.js  — wraps async route handlers to forward errors to next()
-      ApiError.js  — custom error class with HTTP status code and error code fields
-      ApiResponse.js  — standard success response envelope helper
-      logger.js  — pino/winston logger singleton
-    adapters/
-      paymentGateway.js  — outbound adapter for Payment Gateway REST API (authorize, capture, refund, webhook verify)
-      mappingApi.js  — outbound adapter for Mapping/Geocoding REST API (geocode, distanceETA, routePolyline)
-      messagingProvider.js  — outbound adapter for Messaging Provider REST API (sendSMS, sendPush, sendEmail)
-  modules/
-    auth/
-      auth.router.js  — Express router: POST /register, POST /login, POST /logout, POST /refresh-token, POST /forgot-password, POST /reset-password, GET /verify-email
-      auth.controller.js  — request/response handling for all auth endpoints
-      auth.service.js  — registration, login, token lifecycle, email-verification, and password-reset business logic
-      auth.validation.js  — Joi/Zod schemas for register, login, reset-password request bodies
-    users/
-      users.router.js  — Express router: GET/PATCH /me, GET/POST/PUT/DELETE /me/addresses (customer profile and saved addresses)
-      users.controller.js  — request/response handling for profile and address management
-      users.service.js  — profile read/update and address CRUD business logic
-      users.validation.js  — Joi/Zod schemas for profile and address request bodies
-    restaurants/
-      restaurants.router.js  — Express router: GET / (browse+filter), GET /search, GET /:id, GET /:id/menu — customer-facing; PATCH /:id and settings routes for managers
-      restaurants.controller.js  — request/response handling for restaurant and menu browsing and partner settings
-      restaurants.service.js  — geo-filtered restaurant listing, search, menu retrieval, delivery-radius logic, and partner settings updates
-      restaurants.validation.js  — Joi/Zod schemas for search query params and settings update bodies
-    menu/
-      menu.router.js  — Express router: POST/PUT/DELETE /restaurants/:id/categories and /categories/:catId/items — restaurant-manager menu management
-      menu.controller.js  — request/response handling for category and item CRUD
-      menu.service.js  — menu category and item create, update, delete, and availability-toggle business logic
-      menu.validation.js  — Joi/Zod schemas for category and item request bodies (including allergens)
-    cart/
-      cart.router.js  — Express router: GET /cart, PUT /cart, DELETE /cart, POST /cart/items, PATCH /cart/items/:itemId, DELETE /cart/items/:itemId
-      cart.controller.js  — request/response handling for cart operations
-      cart.service.js  — cart read, upsert, and item manipulation; price re-validation against current menu on checkout
-      cart.validation.js  — Joi/Zod schemas for cart and item request bodies
-    orders/
-      orders.router.js  — Express router: POST / (place order), GET / (history), GET /:id, PATCH /:id/status — served for customer, restaurant-manager, and admin roles
-      orders.controller.js  — request/response handling for order placement, status updates, and history
-      orders.service.js  — order creation from cart snapshot, status-machine transitions, order-queue logic for restaurants, real-time Socket.IO event emission
-      orders.events.js  — Socket.IO event names and room helpers for order status broadcasts
-      orders.validation.js  — Joi/Zod schemas for place-order and status-update request bodies
-    payments/
-      payments.router.js  — Express router: POST /payments/initiate, POST /payments/confirm, POST /payments/:id/refund, POST /payments/webhook (gateway callback)
-      payments.controller.js  — request/response handling for payment initiation, confirmation, refund, and webhook ingestion
-      payments.service.js  — orchestrates gateway adapter calls, persists Payment document (tokens only), links payment to order, issues refunds
-      payments.validation.js  — Joi/Zod schemas for payment request bodies; webhook signature verification
-    delivery/
-      delivery.router.js  — Express router: GET /delivery/jobs (agent queue), PATCH /delivery/:id/status, POST /delivery/:id/location, GET /delivery/:id (tracking detail), POST /delivery/:id/proof
-      delivery.controller.js  — request/response handling for delivery assignment, status updates, location pings, and proof-of-delivery upload
-      delivery.service.js  — delivery-agent assignment, status transitions, ETA recalculation via mapping adapter, location history persistence, single-tap status update logic
-      delivery.events.js  — Socket.IO event names and room helpers for live delivery location broadcasts
-      delivery.validation.js  — Joi/Zod schemas for status update and location ping request bodies
-    reviews/
-      reviews.router.js  — Express router: POST /reviews (submit), GET /restaurants/:id/reviews, GET /reviews (admin list)
-      reviews.controller.js  — request/response handling for review submission and listing
-      reviews.service.js  — review eligibility check (completed order), persistence, and moderation-flag logic
-      reviews.validation.js  — Joi/Zod schemas for review submission body
-    notifications/
-      notifications.service.js  — internal service consumed by other modules — composes and dispatches SMS, push, and email via messaging adapter; handles receipt logging and failure isolation
-      notifications.templates.js  — message template definitions for all platform notification events
-    admin/
-      admin.router.js  — Express router: dashboard stats, restaurant CRUD and onboarding, user management, order and payment oversight, dispute management, review moderation, delivery-agent management, platform config, and audit-log endpoints — all guarded by authorize(['admin'])
-      admin.controller.js  — request/response handling for all admin operations
-      admin.service.js  — admin business logic: aggregate dashboard metrics, dispute resolution, restaurant approval, platform config reads and writes, audit-log queries
-      admin.validation.js  — Joi/Zod schemas for admin request bodies (onboard restaurant, resolve dispute, update config)
-  routes/
-    index.js  — API gateway router — mounts all module routers under /api/v1 with appropriate path prefixes
-tests/
-  unit/
-    auth.service.test.js  — unit tests for auth service (registration, token logic, password reset)
-    orders.service.test.js  — unit tests for order placement and status-machine transitions
-    payments.service.test.js  — unit tests for payment orchestration and webhook handling
-    delivery.service.test.js  — unit tests for agent assignment and ETA logic
-    cart.service.test.js  — unit tests for cart price re-validation
-  integration/
-    auth.routes.test.js  — integration tests for auth API endpoints using supertest + in-memory MongoDB
-    restaurants.routes.test.js  — integration tests for restaurant and menu browse endpoints
-    orders.routes.test.js  — integration tests for order placement flow
-    payments.webhook.test.js  — integration tests for webhook ingestion and signature verification
-    admin.routes.test.js  — integration tests for admin-only endpoints and RBAC enforcement
-  fixtures/
-    users.fixture.js  — reusable test user documents for all roles
-    restaurants.fixture.js  — reusable test restaurant and menu documents
-    orders.fixture.js  — reusable test order documents
-  helpers/
-    dbSetup.js  — mongodb-memory-server lifecycle helpers for integration tests
-    jwtHelper.js  — generates signed test JWTs for each role
+package.json  — root workspace package.json defining npm workspaces for all packages and services
+package-lock.json  — lockfile
+.env.example  — template for all environment variables across services
+.gitignore  — root gitignore
+docker-compose.yml  — local dev orchestration: MongoDB, core-api, ordering-service, gateway
+packages/
+  db-models/
+    package.json  — package descriptor — name: @quickbite/db-models
+    src/
+      connection.js  — creates and exports a Mongoose connection factory used by each service
+      models/
+        User.model.js  — Mongoose schema and model for User — embeds savedAddresses, location, agentProfile, currentLocation, notificationPreferences
+        Restaurant.model.js  — Mongoose schema and model for Restaurant — embeds address, location, operatingHours, menuCategories, items (with allergen/dietary fields per NFR-5)
+        Cart.model.js  — Mongoose schema and model for Cart — embeds items subdocument array
+        Order.model.js  — Mongoose schema and model for Order — embeds deliveryAddress, location, items, statusHistory
+        Payment.model.js  — Mongoose schema and model for Payment — embeds refunds subdocument array; no raw card fields
+        Delivery.model.js  — Mongoose schema and model for Delivery — embeds restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts
+        Review.model.js  — Mongoose schema and model for Review — top-level collection
+        Dispute.model.js  — Mongoose schema and model for Dispute — top-level collection
+        PlatformConfig.model.js  — Mongoose schema and model for PlatformConfig — singleton-style collection for platform-wide settings including per-restaurant delivery radius config
+        AdminAuditLog.model.js  — Mongoose schema and model for AdminAuditLog — records actor, timestamp, action, affected entity (NFR-11)
+      index.js  — barrel export for all models and connection factory
+  shared-middleware/
+    package.json  — package descriptor — name: @quickbite/shared-middleware
+    src/
+      auth/
+        jwt.middleware.js  — verifies JWT from Authorization header; attaches decoded user to req.user
+        rbac.middleware.js  — role-based access control factory — enforces allowed roles per route (NFR-11)
+      rateLimiter.js  — express-rate-limit configurations for auth and payment endpoints (NFR-12)
+      requestLogger.js  — structured HTTP request logging middleware
+      errorHandler.js  — global Express error-handling middleware; maps domain errors to HTTP status codes
+      validate.js  — Joi/Zod schema validation middleware factory
+      index.js  — barrel export
+  shared-utils/
+    package.json  — package descriptor — name: @quickbite/shared-utils
+    src/
+      jwt.utils.js  — sign and verify JWT tokens using shared secret/config
+      password.utils.js  — bcrypt hash and compare helpers (NFR-9)
+      pagination.utils.js  — cursor/offset pagination helpers for list endpoints
+      asyncHandler.js  — wraps async route handlers to forward errors to Express error handler
+      index.js  — barrel export
+services/
+  api-gateway/
+    package.json  — dependencies: http-proxy-middleware, express, helmet, cors, express-rate-limit
+    src/
+      index.js  — entry point — starts gateway on configured port
+      app.js  — Express app: global TLS enforcement, CORS, helmet, rate limiting, route proxying
+      proxy.config.js  — maps URL path prefixes to upstream services (core-api, ordering-service) with health-check awareness
+  core-api/
+    package.json  — dependencies: express, mongoose, @quickbite/db-models, @quickbite/shared-middleware, @quickbite/shared-utils, socket.io (for auth status notifications), jsonwebtoken, bcrypt, nodemailer/messaging-sdk, axios
+    src/
+      index.js  — entry point — connects Mongoose, starts HTTP server
+      app.js  — Express app factory: registers middleware, mounts feature routers
+      config/
+        index.js  — loads and validates environment variables (DB URI, JWT secret, messaging provider keys, mapping API key)
+      modules/
+        auth/
+          auth.routes.js  — POST /auth/register, /auth/login, /auth/logout, /auth/verify-email, /auth/forgot-password, /auth/reset-password
+          auth.controller.js  — thin handler — delegates to auth.service, returns HTTP responses
+          auth.service.js  — registration, login (bcrypt verify + JWT sign), email verification token logic, password reset flow
+          auth.validators.js  — Joi/Zod schemas for auth request bodies
+        users/
+          users.routes.js  — GET/PATCH /users/me, GET/PATCH /users/me/notification-preferences; admin: GET /users, GET /users/:id, PATCH /users/:id/status
+          users.controller.js  — profile read/update, notification preferences, admin user management handlers
+          users.service.js  — business logic for profile updates, address management (read/write through User model embeds), notification preference updates
+          users.validators.js  — request body and param validation schemas
+        restaurants/
+          restaurants.routes.js  — GET /restaurants (browse/search with geo filter), GET /restaurants/:id (detail + menu); manager: PATCH /restaurants/:id/settings; admin: GET /admin/restaurants, POST /admin/restaurants (onboard), PATCH /admin/restaurants/:id, DELETE /admin/restaurants/:id
+          restaurants.controller.js  — browse, search, detail, settings update, admin CRUD handlers
+          restaurants.service.js  — geospatial queries, operating-hours logic, delivery radius config read from PlatformConfig or Restaurant document; all menu data accessed through Restaurant model
+          restaurants.validators.js  — validation schemas for restaurant create/update
+        menus/
+          menus.routes.js  — POST/PATCH/DELETE /restaurants/:id/categories, POST/PATCH/DELETE /restaurants/:id/items — all mutations go through Restaurant document (embedded menuCategories and items)
+          menus.controller.js  — menu category and item CRUD handlers; allergen/dietary flag management (NFR-5)
+          menus.service.js  — reads and writes menuCategories/items sub-arrays inside the Restaurant aggregate via Restaurant.model; no separate Menu collection
+          menus.validators.js  — item schema validation including allergen fields
+        reviews/
+          reviews.routes.js  — POST /reviews (submit), GET /restaurants/:id/reviews, GET /admin/reviews; admin: DELETE /reviews/:id
+          reviews.controller.js  — submit review after order completion check, fetch restaurant reviews, admin moderation
+          reviews.service.js  — create Review document, compute aggregated rating, admin list/remove
+          reviews.validators.js  — review submission schema
+        admin/
+          admin.routes.js  — GET /admin/audit-logs, GET/PATCH /admin/platform-config, GET/PATCH /admin/disputes, admin user and agent onboarding endpoints
+          admin.controller.js  — audit log queries, platform config management, dispute resolution, agent onboarding
+          admin.service.js  — platform config CRUD via PlatformConfig model, audit log writes via AdminAuditLog model, dispute workflow via Dispute model
+          admin.validators.js  — platform config and dispute update schemas
+        disputes/
+          disputes.routes.js  — POST /disputes (raise), GET /disputes/:id; admin routes registered in admin module
+          disputes.controller.js  — raise dispute, fetch dispute detail
+          disputes.service.js  — create Dispute document linked to Order; update status via admin flows
+          disputes.validators.js  — dispute creation schema
+        notifications/
+          notifications.service.js  — sends SMS, push, and email via Messaging Provider REST client; called internally by other services — not a routed module
+          messaging.client.js  — axios wrapper for Messaging Provider outbound HTTPS calls with retry and failure isolation (NFR-17)
+        geocoding/
+          geocoding.service.js  — wraps Mapping/Geocoding API calls for address resolution, distance/ETA, route polylines
+          mapping.client.js  — axios wrapper for Mapping API outbound HTTPS calls with error isolation
+    tests/
+      unit/
+        auth.service.test.js  — unit tests for auth service
+        users.service.test.js  — unit tests for user/address logic
+        restaurants.service.test.js  — unit tests for restaurant and menu service
+        reviews.service.test.js  — unit tests for review logic
+        admin.service.test.js  — unit tests for admin and config logic
+      integration/
+        auth.routes.test.js  — integration tests for auth endpoints with in-memory MongoDB
+        restaurants.routes.test.js  — integration tests for browse/search/menu endpoints
+        menus.routes.test.js  — integration tests for menu management via Restaurant aggregate
+        reviews.routes.test.js  — integration tests for review submission and listing
+  ordering-service/
+    package.json  — dependencies: express, mongoose, @quickbite/db-models, @quickbite/shared-middleware, @quickbite/shared-utils, socket.io, axios
+    src/
+      index.js  — entry point — connects Mongoose, starts HTTP + Socket.IO server
+      app.js  — Express app factory: mounts ordering, payment, delivery routers; initialises Socket.IO
+      config/
+        index.js  — loads env vars: DB URI, JWT secret, payment gateway keys/webhooks, mapping API key, messaging keys
+      modules/
+        cart/
+          cart.routes.js  — GET /cart, PUT /cart (upsert), DELETE /cart — customer's active cart
+          cart.controller.js  — cart read and upsert handlers
+          cart.service.js  — creates or updates Cart document; validates item references against Restaurant.items embeds; no separate item collection
+          cart.validators.js  — cart item array schema
+        orders/
+          orders.routes.js  — POST /orders (place), GET /orders/:id, GET /orders (customer history), PATCH /orders/:id/status (restaurant manager / internal); admin: GET /admin/orders, GET /admin/orders/:id
+          orders.controller.js  — order placement, status update, history, admin list/detail handlers
+          orders.service.js  — converts Cart to Order document (embeds deliveryAddress, items snapshot, statusHistory); emits Socket.IO events on status change; calls notification service; links to Payment and Delivery
+          orders.validators.js  — order placement and status update schemas
+        payments/
+          payments.routes.js  — POST /payments/initiate, POST /payments/capture, POST /payments/refund, POST /payments/webhook (gateway settlement callback); admin: GET /admin/payments, GET /admin/payments/:id
+          payments.controller.js  — payment initiation, capture, refund, webhook ingestion, admin list/detail
+          payments.service.js  — orchestrates Payment document lifecycle; calls payment.client; stores gateway token references only (PCI-DSS — no raw card data); embeds refund sub-documents into Payment
+          payment.client.js  — axios wrapper for outbound Payment Gateway HTTPS/REST calls; handles auth headers, retries, failure isolation (NFR-17)
+          payments.validators.js  — payment request schemas; webhook signature verification
+        deliveries/
+          deliveries.routes.js  — POST /deliveries (create after order confirmed), GET /deliveries/:id, PATCH /deliveries/:id/status (agent updates), PATCH /deliveries/:id/location (agent GPS ping); admin: GET /admin/deliveries
+          deliveries.controller.js  — delivery creation, agent status/location update, tracking fetch handlers
+          deliveries.service.js  — creates Delivery document (embeds restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts); assignment algorithm; calls geocoding service for ETA; emits real-time location events via Socket.IO (NFR-6 single-tap updates)
+          deliveries.validators.js  — delivery status and location update schemas
+        realtime/
+          socket.manager.js  — initialises Socket.IO on the HTTP server; manages rooms per orderId; broadcasts order-status and agent-location events to subscribed customers and restaurant managers
+          socket.auth.js  — authenticates Socket.IO handshake using JWT before allowing room subscription
+    tests/
+      unit/
+        cart.service.test.js  — unit tests for cart upsert logic
+        orders.service.test.js  — unit tests for order placement and status machine
+        payments.service.test.js  — unit tests for payment lifecycle and refund embed logic
+        deliveries.service.test.js  — unit tests for delivery assignment and location update
+      integration/
+        orders.routes.test.js  — integration tests for order placement flow with mocked payment client
+        payments.routes.test.js  — integration tests for payment initiate/capture/webhook with mocked gateway
+        deliveries.routes.test.js  — integration tests for delivery status and location update flow
 ```
 
 ## Notes
-- Each module is a self-contained vertical slice (router → controller → service → shared models). To extract a module into a standalone Express process for independent scaling, add a new entry point that imports only that module's router and the shared middleware — no business logic changes required.
-- All Mongoose models live in shared/models/ and are imported by whichever modules need them; this mirrors the 'shared data-access layer' called out in the architecture and avoids duplication while keeping module services focused.
-- The payments module never stores raw card data; Payment.model.js holds only gateway tokens and status fields, satisfying PCI DSS scoping.
-- Socket.IO rooms follow the pattern order:{orderId} and delivery:{deliveryId}; the orders and delivery modules emit events from their service layer after persisting state changes.
-- Rate limiting presets in config/rateLimiter.js are applied per-router in the auth and payments routers, and the shared rateLimiters.js middleware exports them for easy mounting.
-- The auditLog middleware in shared/middleware/ is applied selectively to admin-router mutating endpoints and writes AdminAuditLog documents synchronously before responding, satisfying NFR-11.
-- The notifications module is intentionally internal (no router); other modules import notifications.service.js directly. External provider failures are caught and logged within the adapter, isolating them from the calling module (NFR-17).
-- Proof-of-delivery photo uploads (Delivery Agent) should be routed through a multipart handler in delivery.controller.js and stored in cloud object storage (e.g. S3); a presigned-URL approach is recommended so binary data never passes through the Express process in production.
-- docker-compose.yml spins up a local MongoDB replica set (single node) to support Mongoose transactions, which are used in the order-placement and payment-confirmation flows to ensure atomicity (NFR-7).
-- The .eslintrc.js should use eslint-plugin-import with restricted paths to prevent cross-module direct imports (e.g. orders module must not import from payments service directly; inter-module calls go through the service layer).
+- Each service (core-api, ordering-service) connects to MongoDB independently with its own Mongoose connection pool; the shared @quickbite/db-models package supplies schemas/models only — it does not create connections itself.
+- No SQL migrations exist; MongoDB schema evolution is handled via Mongoose schema versioning and application-level migration scripts if required.
+- Embedded entities (savedAddresses, location, agentProfile, currentLocation, notificationPreferences on User; address, location, operatingHours, menuCategories, items on Restaurant; items on Cart; deliveryAddress, location, items, statusHistory on Order; refunds on Payment; restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts on Delivery) have NO separate Mongoose models, collections, or repositories — all reads and writes go through the parent model.
+- The menus module performs all menu category and item CRUD by querying and mutating subdocument arrays within the Restaurant aggregate — there is no separate Menu collection.
+- PCI DSS compliance is enforced in payments.service.js and payment.client.js: only gateway-issued tokens are stored; the Payment model schema must not define fields for raw card numbers, CVV, or full PAN.
+- Socket.IO is instantiated only in ordering-service; core-api may emit low-volume auth events but does not run a second Socket.IO server.
+- The api-gateway is a thin reverse proxy (http-proxy-middleware); it is not responsible for business logic or JWT verification — each service validates tokens independently via shared-middleware.
+- Rate limiting (express-rate-limit) is applied at both the gateway level (global) and at the service level on /auth/* and /payments/* routes specifically (NFR-12).
+- AdminAuditLog writes should be triggered as a cross-cutting concern via a service-layer wrapper or event hook whenever a privileged administrative action succeeds, ensuring actor, timestamp, and affected entity are always captured (NFR-11).
+- The delivery radius per restaurant is stored as a field inside the Restaurant document or referenced from PlatformConfig; deliveries.service.js and restaurants.service.js both read this value — coordinate how the configurable delivery radius (constraint 4) is modelled before finalising schemas.
+- For the single-metro v1.0 launch, a single MongoDB replica set satisfies NFR-7 (durable committed order/payment data on single-node failure); sharding is an extraction path for future growth.
+- docker-compose.yml is provided for local development only; production deployment topology (e.g. separate containers/pods per service) should be configured in a separate infra repository or Helm chart.

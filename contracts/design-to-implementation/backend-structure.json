@@ -1,168 +1,209 @@
 {
   "tree": {
-    "package.json": "root dependencies and npm scripts (start, dev, test, lint)",
-    "package-lock.json": "locked dependency tree",
-    ".env.example": "documented environment variable template",
-    ".eslintrc.js": "ESLint config enforcing import boundaries between modules",
-    ".prettierrc": "code style config",
-    "jest.config.js": "Jest root config with per-module test projects",
-    "Dockerfile": "production container image definition",
-    "docker-compose.yml": "local dev stack: app + MongoDB",
-    "src/": {
-      "server.js": "Express app factory — mounts API gateway router, Socket.IO, and graceful-shutdown logic",
-      "app.js": "creates and exports the configured Express application instance",
-      "socket.js": "Socket.IO server initialization and room/event registration for order and delivery updates",
-      "config/": {
-        "index.js": "centralised config loader — reads and validates env vars via joi/zod, exports typed config object",
-        "db.js": "Mongoose connection factory with retry logic and connection-event logging",
-        "rateLimiter.js": "express-rate-limit presets (auth, payment, general API)"
-      },
-      "shared/": {
-        "models/": {
-          "User.model.js": "Mongoose schema/model for User (all roles, bcrypt password hook, role enum)",
-          "Restaurant.model.js": "Mongoose schema/model for Restaurant (location, delivery radius, hours, status)",
-          "Menu.model.js": "Mongoose schema/model for Menu categories and items (allergens, dietary flags, availability)",
-          "Cart.model.js": "Mongoose schema/model for Cart (userId ref, line items, expiry TTL index)",
-          "Order.model.js": "Mongoose schema/model for Order (status state machine, embedded snapshot of items and prices)",
-          "Payment.model.js": "Mongoose schema/model for Payment (gateway token, status, no raw card fields)",
-          "Delivery.model.js": "Mongoose schema/model for Delivery (agentId ref, status, location history, ETA)",
-          "Review.model.js": "Mongoose schema/model for Review (orderId ref, ratings, text, moderation status)",
-          "PlatformConfig.model.js": "Mongoose schema/model for PlatformConfig (singleton-style key-value operational settings)",
-          "AdminAuditLog.model.js": "Mongoose schema/model for AdminAuditLog (actor, action, entity, timestamp, diff)"
-        },
-        "middleware/": {
-          "authenticate.js": "JWT verification middleware — attaches decoded user to req.user",
-          "authorize.js": "RBAC middleware factory — authorize(roles[]) returns Express middleware",
-          "auditLog.js": "middleware/helper that writes AdminAuditLog entries for privileged mutations",
-          "rateLimiters.js": "exports named rate-limiter middleware instances from config/rateLimiter.js",
-          "requestLogger.js": "HTTP request/response logger (morgan or pino-http)",
-          "errorHandler.js": "global Express error-handling middleware — formats and returns RFC 7807 errors",
-          "notFound.js": "catch-all 404 handler mounted after all routers",
-          "validateBody.js": "generic request-body validation middleware factory wrapping Joi/Zod schemas"
-        },
-        "utils/": {
-          "jwt.js": "sign and verify JWT access and refresh tokens",
-          "password.js": "bcrypt hash and compare helpers",
-          "paginate.js": "MongoDB skip/limit pagination helper",
-          "asyncHandler.js": "wraps async route handlers to forward errors to next()",
-          "ApiError.js": "custom error class with HTTP status code and error code fields",
-          "ApiResponse.js": "standard success response envelope helper",
-          "logger.js": "pino/winston logger singleton"
-        },
-        "adapters/": {
-          "paymentGateway.js": "outbound adapter for Payment Gateway REST API (authorize, capture, refund, webhook verify)",
-          "mappingApi.js": "outbound adapter for Mapping/Geocoding REST API (geocode, distanceETA, routePolyline)",
-          "messagingProvider.js": "outbound adapter for Messaging Provider REST API (sendSMS, sendPush, sendEmail)"
+    "package.json": "root workspace package.json defining npm workspaces for all packages and services",
+    "package-lock.json": "lockfile",
+    ".env.example": "template for all environment variables across services",
+    ".gitignore": "root gitignore",
+    "docker-compose.yml": "local dev orchestration: MongoDB, core-api, ordering-service, gateway",
+    "packages/": {
+      "db-models/": {
+        "package.json": "package descriptor — name: @quickbite/db-models",
+        "src/": {
+          "connection.js": "creates and exports a Mongoose connection factory used by each service",
+          "models/": {
+            "User.model.js": "Mongoose schema and model for User — embeds savedAddresses, location, agentProfile, currentLocation, notificationPreferences",
+            "Restaurant.model.js": "Mongoose schema and model for Restaurant — embeds address, location, operatingHours, menuCategories, items (with allergen/dietary fields per NFR-5)",
+            "Cart.model.js": "Mongoose schema and model for Cart — embeds items subdocument array",
+            "Order.model.js": "Mongoose schema and model for Order — embeds deliveryAddress, location, items, statusHistory",
+            "Payment.model.js": "Mongoose schema and model for Payment — embeds refunds subdocument array; no raw card fields",
+            "Delivery.model.js": "Mongoose schema and model for Delivery — embeds restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts",
+            "Review.model.js": "Mongoose schema and model for Review — top-level collection",
+            "Dispute.model.js": "Mongoose schema and model for Dispute — top-level collection",
+            "PlatformConfig.model.js": "Mongoose schema and model for PlatformConfig — singleton-style collection for platform-wide settings including per-restaurant delivery radius config",
+            "AdminAuditLog.model.js": "Mongoose schema and model for AdminAuditLog — records actor, timestamp, action, affected entity (NFR-11)"
+          },
+          "index.js": "barrel export for all models and connection factory"
         }
       },
-      "modules/": {
-        "auth/": {
-          "auth.router.js": "Express router: POST /register, POST /login, POST /logout, POST /refresh-token, POST /forgot-password, POST /reset-password, GET /verify-email",
-          "auth.controller.js": "request/response handling for all auth endpoints",
-          "auth.service.js": "registration, login, token lifecycle, email-verification, and password-reset business logic",
-          "auth.validation.js": "Joi/Zod schemas for register, login, reset-password request bodies"
-        },
-        "users/": {
-          "users.router.js": "Express router: GET/PATCH /me, GET/POST/PUT/DELETE /me/addresses (customer profile and saved addresses)",
-          "users.controller.js": "request/response handling for profile and address management",
-          "users.service.js": "profile read/update and address CRUD business logic",
-          "users.validation.js": "Joi/Zod schemas for profile and address request bodies"
-        },
-        "restaurants/": {
-          "restaurants.router.js": "Express router: GET / (browse+filter), GET /search, GET /:id, GET /:id/menu — customer-facing; PATCH /:id and settings routes for managers",
-          "restaurants.controller.js": "request/response handling for restaurant and menu browsing and partner settings",
-          "restaurants.service.js": "geo-filtered restaurant listing, search, menu retrieval, delivery-radius logic, and partner settings updates",
-          "restaurants.validation.js": "Joi/Zod schemas for search query params and settings update bodies"
-        },
-        "menu/": {
-          "menu.router.js": "Express router: POST/PUT/DELETE /restaurants/:id/categories and /categories/:catId/items — restaurant-manager menu management",
-          "menu.controller.js": "request/response handling for category and item CRUD",
-          "menu.service.js": "menu category and item create, update, delete, and availability-toggle business logic",
-          "menu.validation.js": "Joi/Zod schemas for category and item request bodies (including allergens)"
-        },
-        "cart/": {
-          "cart.router.js": "Express router: GET /cart, PUT /cart, DELETE /cart, POST /cart/items, PATCH /cart/items/:itemId, DELETE /cart/items/:itemId",
-          "cart.controller.js": "request/response handling for cart operations",
-          "cart.service.js": "cart read, upsert, and item manipulation; price re-validation against current menu on checkout",
-          "cart.validation.js": "Joi/Zod schemas for cart and item request bodies"
-        },
-        "orders/": {
-          "orders.router.js": "Express router: POST / (place order), GET / (history), GET /:id, PATCH /:id/status — served for customer, restaurant-manager, and admin roles",
-          "orders.controller.js": "request/response handling for order placement, status updates, and history",
-          "orders.service.js": "order creation from cart snapshot, status-machine transitions, order-queue logic for restaurants, real-time Socket.IO event emission",
-          "orders.events.js": "Socket.IO event names and room helpers for order status broadcasts",
-          "orders.validation.js": "Joi/Zod schemas for place-order and status-update request bodies"
-        },
-        "payments/": {
-          "payments.router.js": "Express router: POST /payments/initiate, POST /payments/confirm, POST /payments/:id/refund, POST /payments/webhook (gateway callback)",
-          "payments.controller.js": "request/response handling for payment initiation, confirmation, refund, and webhook ingestion",
-          "payments.service.js": "orchestrates gateway adapter calls, persists Payment document (tokens only), links payment to order, issues refunds",
-          "payments.validation.js": "Joi/Zod schemas for payment request bodies; webhook signature verification"
-        },
-        "delivery/": {
-          "delivery.router.js": "Express router: GET /delivery/jobs (agent queue), PATCH /delivery/:id/status, POST /delivery/:id/location, GET /delivery/:id (tracking detail), POST /delivery/:id/proof",
-          "delivery.controller.js": "request/response handling for delivery assignment, status updates, location pings, and proof-of-delivery upload",
-          "delivery.service.js": "delivery-agent assignment, status transitions, ETA recalculation via mapping adapter, location history persistence, single-tap status update logic",
-          "delivery.events.js": "Socket.IO event names and room helpers for live delivery location broadcasts",
-          "delivery.validation.js": "Joi/Zod schemas for status update and location ping request bodies"
-        },
-        "reviews/": {
-          "reviews.router.js": "Express router: POST /reviews (submit), GET /restaurants/:id/reviews, GET /reviews (admin list)",
-          "reviews.controller.js": "request/response handling for review submission and listing",
-          "reviews.service.js": "review eligibility check (completed order), persistence, and moderation-flag logic",
-          "reviews.validation.js": "Joi/Zod schemas for review submission body"
-        },
-        "notifications/": {
-          "notifications.service.js": "internal service consumed by other modules — composes and dispatches SMS, push, and email via messaging adapter; handles receipt logging and failure isolation",
-          "notifications.templates.js": "message template definitions for all platform notification events"
-        },
-        "admin/": {
-          "admin.router.js": "Express router: dashboard stats, restaurant CRUD and onboarding, user management, order and payment oversight, dispute management, review moderation, delivery-agent management, platform config, and audit-log endpoints — all guarded by authorize(['admin'])",
-          "admin.controller.js": "request/response handling for all admin operations",
-          "admin.service.js": "admin business logic: aggregate dashboard metrics, dispute resolution, restaurant approval, platform config reads and writes, audit-log queries",
-          "admin.validation.js": "Joi/Zod schemas for admin request bodies (onboard restaurant, resolve dispute, update config)"
+      "shared-middleware/": {
+        "package.json": "package descriptor — name: @quickbite/shared-middleware",
+        "src/": {
+          "auth/": {
+            "jwt.middleware.js": "verifies JWT from Authorization header; attaches decoded user to req.user",
+            "rbac.middleware.js": "role-based access control factory — enforces allowed roles per route (NFR-11)"
+          },
+          "rateLimiter.js": "express-rate-limit configurations for auth and payment endpoints (NFR-12)",
+          "requestLogger.js": "structured HTTP request logging middleware",
+          "errorHandler.js": "global Express error-handling middleware; maps domain errors to HTTP status codes",
+          "validate.js": "Joi/Zod schema validation middleware factory",
+          "index.js": "barrel export"
         }
       },
-      "routes/": {
-        "index.js": "API gateway router — mounts all module routers under /api/v1 with appropriate path prefixes"
+      "shared-utils/": {
+        "package.json": "package descriptor — name: @quickbite/shared-utils",
+        "src/": {
+          "jwt.utils.js": "sign and verify JWT tokens using shared secret/config",
+          "password.utils.js": "bcrypt hash and compare helpers (NFR-9)",
+          "pagination.utils.js": "cursor/offset pagination helpers for list endpoints",
+          "asyncHandler.js": "wraps async route handlers to forward errors to Express error handler",
+          "index.js": "barrel export"
+        }
       }
     },
-    "tests/": {
-      "unit/": {
-        "auth.service.test.js": "unit tests for auth service (registration, token logic, password reset)",
-        "orders.service.test.js": "unit tests for order placement and status-machine transitions",
-        "payments.service.test.js": "unit tests for payment orchestration and webhook handling",
-        "delivery.service.test.js": "unit tests for agent assignment and ETA logic",
-        "cart.service.test.js": "unit tests for cart price re-validation"
+    "services/": {
+      "api-gateway/": {
+        "package.json": "dependencies: http-proxy-middleware, express, helmet, cors, express-rate-limit",
+        "src/": {
+          "index.js": "entry point — starts gateway on configured port",
+          "app.js": "Express app: global TLS enforcement, CORS, helmet, rate limiting, route proxying",
+          "proxy.config.js": "maps URL path prefixes to upstream services (core-api, ordering-service) with health-check awareness"
+        }
       },
-      "integration/": {
-        "auth.routes.test.js": "integration tests for auth API endpoints using supertest + in-memory MongoDB",
-        "restaurants.routes.test.js": "integration tests for restaurant and menu browse endpoints",
-        "orders.routes.test.js": "integration tests for order placement flow",
-        "payments.webhook.test.js": "integration tests for webhook ingestion and signature verification",
-        "admin.routes.test.js": "integration tests for admin-only endpoints and RBAC enforcement"
+      "core-api/": {
+        "package.json": "dependencies: express, mongoose, @quickbite/db-models, @quickbite/shared-middleware, @quickbite/shared-utils, socket.io (for auth status notifications), jsonwebtoken, bcrypt, nodemailer/messaging-sdk, axios",
+        "src/": {
+          "index.js": "entry point — connects Mongoose, starts HTTP server",
+          "app.js": "Express app factory: registers middleware, mounts feature routers",
+          "config/": {
+            "index.js": "loads and validates environment variables (DB URI, JWT secret, messaging provider keys, mapping API key)"
+          },
+          "modules/": {
+            "auth/": {
+              "auth.routes.js": "POST /auth/register, /auth/login, /auth/logout, /auth/verify-email, /auth/forgot-password, /auth/reset-password",
+              "auth.controller.js": "thin handler — delegates to auth.service, returns HTTP responses",
+              "auth.service.js": "registration, login (bcrypt verify + JWT sign), email verification token logic, password reset flow",
+              "auth.validators.js": "Joi/Zod schemas for auth request bodies"
+            },
+            "users/": {
+              "users.routes.js": "GET/PATCH /users/me, GET/PATCH /users/me/notification-preferences; admin: GET /users, GET /users/:id, PATCH /users/:id/status",
+              "users.controller.js": "profile read/update, notification preferences, admin user management handlers",
+              "users.service.js": "business logic for profile updates, address management (read/write through User model embeds), notification preference updates",
+              "users.validators.js": "request body and param validation schemas"
+            },
+            "restaurants/": {
+              "restaurants.routes.js": "GET /restaurants (browse/search with geo filter), GET /restaurants/:id (detail + menu); manager: PATCH /restaurants/:id/settings; admin: GET /admin/restaurants, POST /admin/restaurants (onboard), PATCH /admin/restaurants/:id, DELETE /admin/restaurants/:id",
+              "restaurants.controller.js": "browse, search, detail, settings update, admin CRUD handlers",
+              "restaurants.service.js": "geospatial queries, operating-hours logic, delivery radius config read from PlatformConfig or Restaurant document; all menu data accessed through Restaurant model",
+              "restaurants.validators.js": "validation schemas for restaurant create/update"
+            },
+            "menus/": {
+              "menus.routes.js": "POST/PATCH/DELETE /restaurants/:id/categories, POST/PATCH/DELETE /restaurants/:id/items — all mutations go through Restaurant document (embedded menuCategories and items)",
+              "menus.controller.js": "menu category and item CRUD handlers; allergen/dietary flag management (NFR-5)",
+              "menus.service.js": "reads and writes menuCategories/items sub-arrays inside the Restaurant aggregate via Restaurant.model; no separate Menu collection",
+              "menus.validators.js": "item schema validation including allergen fields"
+            },
+            "reviews/": {
+              "reviews.routes.js": "POST /reviews (submit), GET /restaurants/:id/reviews, GET /admin/reviews; admin: DELETE /reviews/:id",
+              "reviews.controller.js": "submit review after order completion check, fetch restaurant reviews, admin moderation",
+              "reviews.service.js": "create Review document, compute aggregated rating, admin list/remove",
+              "reviews.validators.js": "review submission schema"
+            },
+            "admin/": {
+              "admin.routes.js": "GET /admin/audit-logs, GET/PATCH /admin/platform-config, GET/PATCH /admin/disputes, admin user and agent onboarding endpoints",
+              "admin.controller.js": "audit log queries, platform config management, dispute resolution, agent onboarding",
+              "admin.service.js": "platform config CRUD via PlatformConfig model, audit log writes via AdminAuditLog model, dispute workflow via Dispute model",
+              "admin.validators.js": "platform config and dispute update schemas"
+            },
+            "disputes/": {
+              "disputes.routes.js": "POST /disputes (raise), GET /disputes/:id; admin routes registered in admin module",
+              "disputes.controller.js": "raise dispute, fetch dispute detail",
+              "disputes.service.js": "create Dispute document linked to Order; update status via admin flows",
+              "disputes.validators.js": "dispute creation schema"
+            },
+            "notifications/": {
+              "notifications.service.js": "sends SMS, push, and email via Messaging Provider REST client; called internally by other services — not a routed module",
+              "messaging.client.js": "axios wrapper for Messaging Provider outbound HTTPS calls with retry and failure isolation (NFR-17)"
+            },
+            "geocoding/": {
+              "geocoding.service.js": "wraps Mapping/Geocoding API calls for address resolution, distance/ETA, route polylines",
+              "mapping.client.js": "axios wrapper for Mapping API outbound HTTPS calls with error isolation"
+            }
+          }
+        },
+        "tests/": {
+          "unit/": {
+            "auth.service.test.js": "unit tests for auth service",
+            "users.service.test.js": "unit tests for user/address logic",
+            "restaurants.service.test.js": "unit tests for restaurant and menu service",
+            "reviews.service.test.js": "unit tests for review logic",
+            "admin.service.test.js": "unit tests for admin and config logic"
+          },
+          "integration/": {
+            "auth.routes.test.js": "integration tests for auth endpoints with in-memory MongoDB",
+            "restaurants.routes.test.js": "integration tests for browse/search/menu endpoints",
+            "menus.routes.test.js": "integration tests for menu management via Restaurant aggregate",
+            "reviews.routes.test.js": "integration tests for review submission and listing"
+          }
+        }
       },
-      "fixtures/": {
-        "users.fixture.js": "reusable test user documents for all roles",
-        "restaurants.fixture.js": "reusable test restaurant and menu documents",
-        "orders.fixture.js": "reusable test order documents"
-      },
-      "helpers/": {
-        "dbSetup.js": "mongodb-memory-server lifecycle helpers for integration tests",
-        "jwtHelper.js": "generates signed test JWTs for each role"
+      "ordering-service/": {
+        "package.json": "dependencies: express, mongoose, @quickbite/db-models, @quickbite/shared-middleware, @quickbite/shared-utils, socket.io, axios",
+        "src/": {
+          "index.js": "entry point — connects Mongoose, starts HTTP + Socket.IO server",
+          "app.js": "Express app factory: mounts ordering, payment, delivery routers; initialises Socket.IO",
+          "config/": {
+            "index.js": "loads env vars: DB URI, JWT secret, payment gateway keys/webhooks, mapping API key, messaging keys"
+          },
+          "modules/": {
+            "cart/": {
+              "cart.routes.js": "GET /cart, PUT /cart (upsert), DELETE /cart — customer's active cart",
+              "cart.controller.js": "cart read and upsert handlers",
+              "cart.service.js": "creates or updates Cart document; validates item references against Restaurant.items embeds; no separate item collection",
+              "cart.validators.js": "cart item array schema"
+            },
+            "orders/": {
+              "orders.routes.js": "POST /orders (place), GET /orders/:id, GET /orders (customer history), PATCH /orders/:id/status (restaurant manager / internal); admin: GET /admin/orders, GET /admin/orders/:id",
+              "orders.controller.js": "order placement, status update, history, admin list/detail handlers",
+              "orders.service.js": "converts Cart to Order document (embeds deliveryAddress, items snapshot, statusHistory); emits Socket.IO events on status change; calls notification service; links to Payment and Delivery",
+              "orders.validators.js": "order placement and status update schemas"
+            },
+            "payments/": {
+              "payments.routes.js": "POST /payments/initiate, POST /payments/capture, POST /payments/refund, POST /payments/webhook (gateway settlement callback); admin: GET /admin/payments, GET /admin/payments/:id",
+              "payments.controller.js": "payment initiation, capture, refund, webhook ingestion, admin list/detail",
+              "payments.service.js": "orchestrates Payment document lifecycle; calls payment.client; stores gateway token references only (PCI-DSS — no raw card data); embeds refund sub-documents into Payment",
+              "payment.client.js": "axios wrapper for outbound Payment Gateway HTTPS/REST calls; handles auth headers, retries, failure isolation (NFR-17)",
+              "payments.validators.js": "payment request schemas; webhook signature verification"
+            },
+            "deliveries/": {
+              "deliveries.routes.js": "POST /deliveries (create after order confirmed), GET /deliveries/:id, PATCH /deliveries/:id/status (agent updates), PATCH /deliveries/:id/location (agent GPS ping); admin: GET /admin/deliveries",
+              "deliveries.controller.js": "delivery creation, agent status/location update, tracking fetch handlers",
+              "deliveries.service.js": "creates Delivery document (embeds restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts); assignment algorithm; calls geocoding service for ETA; emits real-time location events via Socket.IO (NFR-6 single-tap updates)",
+              "deliveries.validators.js": "delivery status and location update schemas"
+            },
+            "realtime/": {
+              "socket.manager.js": "initialises Socket.IO on the HTTP server; manages rooms per orderId; broadcasts order-status and agent-location events to subscribed customers and restaurant managers",
+              "socket.auth.js": "authenticates Socket.IO handshake using JWT before allowing room subscription"
+            }
+          }
+        },
+        "tests/": {
+          "unit/": {
+            "cart.service.test.js": "unit tests for cart upsert logic",
+            "orders.service.test.js": "unit tests for order placement and status machine",
+            "payments.service.test.js": "unit tests for payment lifecycle and refund embed logic",
+            "deliveries.service.test.js": "unit tests for delivery assignment and location update"
+          },
+          "integration/": {
+            "orders.routes.test.js": "integration tests for order placement flow with mocked payment client",
+            "payments.routes.test.js": "integration tests for payment initiate/capture/webhook with mocked gateway",
+            "deliveries.routes.test.js": "integration tests for delivery status and location update flow"
+          }
+        }
       }
     }
   },
   "notes": [
-    "Each module is a self-contained vertical slice (router → controller → service → shared models). To extract a module into a standalone Express process for independent scaling, add a new entry point that imports only that module's router and the shared middleware — no business logic changes required.",
-    "All Mongoose models live in shared/models/ and are imported by whichever modules need them; this mirrors the 'shared data-access layer' called out in the architecture and avoids duplication while keeping module services focused.",
-    "The payments module never stores raw card data; Payment.model.js holds only gateway tokens and status fields, satisfying PCI DSS scoping.",
-    "Socket.IO rooms follow the pattern order:{orderId} and delivery:{deliveryId}; the orders and delivery modules emit events from their service layer after persisting state changes.",
-    "Rate limiting presets in config/rateLimiter.js are applied per-router in the auth and payments routers, and the shared rateLimiters.js middleware exports them for easy mounting.",
-    "The auditLog middleware in shared/middleware/ is applied selectively to admin-router mutating endpoints and writes AdminAuditLog documents synchronously before responding, satisfying NFR-11.",
-    "The notifications module is intentionally internal (no router); other modules import notifications.service.js directly. External provider failures are caught and logged within the adapter, isolating them from the calling module (NFR-17).",
-    "Proof-of-delivery photo uploads (Delivery Agent) should be routed through a multipart handler in delivery.controller.js and stored in cloud object storage (e.g. S3); a presigned-URL approach is recommended so binary data never passes through the Express process in production.",
-    "docker-compose.yml spins up a local MongoDB replica set (single node) to support Mongoose transactions, which are used in the order-placement and payment-confirmation flows to ensure atomicity (NFR-7).",
-    "The .eslintrc.js should use eslint-plugin-import with restricted paths to prevent cross-module direct imports (e.g. orders module must not import from payments service directly; inter-module calls go through the service layer)."
+    "Each service (core-api, ordering-service) connects to MongoDB independently with its own Mongoose connection pool; the shared @quickbite/db-models package supplies schemas/models only — it does not create connections itself.",
+    "No SQL migrations exist; MongoDB schema evolution is handled via Mongoose schema versioning and application-level migration scripts if required.",
+    "Embedded entities (savedAddresses, location, agentProfile, currentLocation, notificationPreferences on User; address, location, operatingHours, menuCategories, items on Restaurant; items on Cart; deliveryAddress, location, items, statusHistory on Order; refunds on Payment; restaurantLocation, deliveryLocation, agentCurrentLocation, assignmentAttempts on Delivery) have NO separate Mongoose models, collections, or repositories — all reads and writes go through the parent model.",
+    "The menus module performs all menu category and item CRUD by querying and mutating subdocument arrays within the Restaurant aggregate — there is no separate Menu collection.",
+    "PCI DSS compliance is enforced in payments.service.js and payment.client.js: only gateway-issued tokens are stored; the Payment model schema must not define fields for raw card numbers, CVV, or full PAN.",
+    "Socket.IO is instantiated only in ordering-service; core-api may emit low-volume auth events but does not run a second Socket.IO server.",
+    "The api-gateway is a thin reverse proxy (http-proxy-middleware); it is not responsible for business logic or JWT verification — each service validates tokens independently via shared-middleware.",
+    "Rate limiting (express-rate-limit) is applied at both the gateway level (global) and at the service level on /auth/* and /payments/* routes specifically (NFR-12).",
+    "AdminAuditLog writes should be triggered as a cross-cutting concern via a service-layer wrapper or event hook whenever a privileged administrative action succeeds, ensuring actor, timestamp, and affected entity are always captured (NFR-11).",
+    "The delivery radius per restaurant is stored as a field inside the Restaurant document or referenced from PlatformConfig; deliveries.service.js and restaurants.service.js both read this value — coordinate how the configurable delivery radius (constraint 4) is modelled before finalising schemas.",
+    "For the single-metro v1.0 launch, a single MongoDB replica set satisfies NFR-7 (durable committed order/payment data on single-node failure); sharding is an extraction path for future growth.",
+    "docker-compose.yml is provided for local development only; production deployment topology (e.g. separate containers/pods per service) should be configured in a separate infra repository or Helm chart."
   ]
 }

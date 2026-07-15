@@ -80,6 +80,17 @@ DIALECT = os.environ.get("SCHEMA_DIALECT", "postgresql")
 ANTHROPIC_ENDPOINT = os.environ.get("ANTHROPIC_ENDPOINT") or None
 # int() on an empty string throws, so fall back when the env value is blank.
 MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS") or "8000")
+# The deliberation (approach comparison, incl. the coverage self-audit) and the
+# schema itself both grew once coverage rules were added, so give each a budget
+# that won't truncate. Both env-overridable. Raising a CAP is cost-neutral —
+# you only pay for tokens actually generated.
+DELIBERATE_MAX_TOKENS = int(os.environ.get("SCHEMA_DELIBERATE_MAX_TOKENS") or "6000")
+SCHEMA_MAX_TOKENS = int(os.environ.get("SCHEMA_GENERATE_MAX_TOKENS")
+                        or os.environ.get("ANTHROPIC_MAX_TOKENS") or "16000")
+# A large schema can take minutes; the old 180s timeout would trip. max_retries=1
+# so a timed-out call doesn't silently re-bill multiple full generations.
+HTTP_TIMEOUT = float(os.environ.get("SCHEMA_TIMEOUT") or "600")
+MAX_RETRIES = int(os.environ.get("SCHEMA_MAX_RETRIES") or "1")
 
 IN_REQUIREMENTS = "extracted_requirements.json"
 IN_FEATURES = "user_features.json"
@@ -236,7 +247,12 @@ def _client():
             "ANTHROPIC_ENDPOINT is empty. Set it to your Foundry base URL, e.g. "
             "https://<resource>.services.ai.azure.com/anthropic"
         )
-    return AnthropicFoundry(api_key=api_key, base_url=ANTHROPIC_ENDPOINT, timeout=180.0)
+    return AnthropicFoundry(api_key=api_key, base_url=ANTHROPIC_ENDPOINT,
+                            timeout=HTTP_TIMEOUT, max_retries=MAX_RETRIES)
+
+
+class TruncatedResponse(Exception):
+    """Raised when the model hit max_tokens before finishing its JSON."""
 
 
 def _call_json(system: str, user: str, max_tokens: int = MAX_TOKENS) -> dict:
@@ -246,7 +262,21 @@ def _call_json(system: str, user: str, max_tokens: int = MAX_TOKENS) -> dict:
         messages=[{"role": "user", "content": user}],
     )
     text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+    if getattr(resp, "stop_reason", None) == "max_tokens":
+        # cut off before finishing — surface clearly instead of a decode error
+        raise TruncatedResponse(text)
     return _parse_json(text)
+
+
+def _call_json_retry(system: str, user: str, max_tokens: int) -> dict:
+    """_call_json, but if the reply is truncated, retry ONCE at double the
+    budget (capped). Keeps a longer-than-expected generation from crashing."""
+    try:
+        return _call_json(system, user, max_tokens=max_tokens)
+    except TruncatedResponse:
+        bigger = min(max_tokens * 2, 32000)
+        logger.info("Response truncated at %d tokens; retrying at %d...", max_tokens, bigger)
+        return _call_json(system, user, max_tokens=bigger)
 
 
 def _parse_json(text: str) -> dict:
@@ -258,7 +288,10 @@ def _parse_json(text: str) -> dict:
     except json.JSONDecodeError:
         start, end = text.find("{"), text.rfind("}")
         if start != -1 and end != -1:
-            return json.loads(text[start:end + 1])
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                raise TruncatedResponse(text)   # incomplete object
         raise
 
 
@@ -319,10 +352,29 @@ Rules:
 UUID/identity type and default).
 - Add created_at/updated_at timestamps where they make sense, with sensible defaults.
 - Resolve many-to-many relationships with explicit join tables.
-- Map every domain entity to a table; do NOT invent entities beyond those implied.
+- COVERAGE — treat the requirements, business rules and user features as a checklist \
+to fully cover, not merely as inspiration:
+  (1) Entities: anything the requirements treat as MANAGED — created, listed, \
+assigned, resolved, moderated, tracked or configured — gets its own table, even when \
+it appears only as a workflow, action or process rather than as an explicit stored \
+record.
+  (2) Rule-backing fields: for every business rule or constraint that implies stored \
+state, ensure some table carries a column that makes the rule enforceable (a \
+minimum-order rule implies a minimum-order column; a radius rule implies a radius \
+column; and so on).
+  (3) Status/lifecycle: any entity the requirements describe as having states or \
+transitions gets an explicit status column with an enumerated set of allowed values.
+  (4) Relationships: model every association the requirements imply as an explicit \
+foreign key, so downstream consumers never have to invent linkages.
+- BOUNDED by the requirements, NOT by imagination: cover everything the requirements \
+imply, but do NOT invent tables or columns the requirements never ask for. Where \
+practical, each table/column should be justifiable by a specific requirement or rule.
 - Encode business rules as CHECK / UNIQUE constraints wherever expressible in DDL.
 - Add foreign keys with a sensible ON DELETE, and indexes on foreign keys and on \
 columns used for common lookups/filters.
+- SELF-AUDIT before returning: re-read the requirements, business rules and user \
+features; for every entity, rule and lifecycle state, confirm the schema can \
+represent it. If anything is missing, add it, then return the completed schema.
 
 Respond with STRICT JSON only, no prose, no markdown fences:
 {{
@@ -355,8 +407,24 @@ Rules:
 - Deliberately EMBED tightly-owned, read-together data as subdocuments; REFERENCE \
 independent entities by ObjectId with a `ref` to the target collection. Justify the \
 significant embed/reference choices in "notes".
-- Map every domain entity to a collection or an embedded subdocument; do NOT invent \
-entities beyond those implied.
+- COVERAGE — treat the requirements, business rules and user features as a checklist \
+to fully cover, not merely as inspiration:
+  (1) Entities: anything the requirements treat as MANAGED — created, listed, \
+assigned, resolved, moderated, tracked or configured — becomes its own collection (or \
+a deliberately embedded subdocument), even when it appears only as a workflow, action \
+or process rather than as an explicit stored record.
+  (2) Rule-backing fields: for every business rule or constraint that implies stored \
+state, ensure some collection carries a field that makes the rule enforceable (a \
+minimum-order rule implies a minimum-order field; a radius rule implies a radius \
+field; and so on).
+  (3) Status/lifecycle: any entity the requirements describe as having states or \
+transitions gets an explicit status field with an enum of allowed values.
+  (4) Relationships: model every association the requirements imply as an explicit \
+reference (ObjectId + ref) or a deliberate embed, so downstream consumers never have \
+to invent linkages.
+- BOUNDED by the requirements, NOT by imagination: cover everything the requirements \
+imply, but do NOT invent collections or fields the requirements never ask for. Where \
+practical, each collection/field should be justifiable by a specific requirement or rule.
 - Field types: String, Number, Boolean, Date, ObjectId, Mixed, Buffer, Decimal128. \
 For arrays use "[Type]" (e.g. "[String]"). For an embedded subdocument use type \
 "Object" (or "[Object]" for a list) and nest its "fields". For a reference set type \
@@ -370,6 +438,9 @@ types deliberately.
   of field paths OR an object mapping each path to 1/-1/"2dsphere"/"text" for full
   control. GeoJSON point fields ({type:"Point", coordinates:[lng,lat]}) MUST get a
   "2dsphere" index to support geo queries; ephemeral collections can use a TTL index.
+- SELF-AUDIT before returning: re-read the requirements, business rules and user \
+features; for every entity, rule and lifecycle state, confirm the schema can \
+represent it. If anything is missing, add it, then return the completed schema.
 
 Respond with STRICT JSON only, no prose, no markdown fences:
 {{
@@ -404,7 +475,27 @@ keyspaces/tables with partition & clustering keys for Cassandra; table + key sch
 GSIs for DynamoDB; node/relationship definitions and constraints for a graph DB; \
 index mappings for a search engine).
 - Design around the application's primary access patterns.
-- Map every domain entity; do NOT invent entities beyond those implied.
+- COVERAGE — treat the requirements, business rules and user features as a checklist \
+to fully cover, not merely as inspiration, expressed in this datastore's own idioms:
+  (1) Entities: anything the requirements treat as MANAGED — created, listed, \
+assigned, resolved, moderated, tracked or configured — becomes a first-class modelled \
+thing (table/node/index/document as the datastore expresses it), even when it appears \
+only as a workflow, action or process rather than as an explicit stored record.
+  (2) Rule-backing attributes: for every business rule or constraint that implies \
+stored state, ensure some entity carries an attribute that makes the rule enforceable \
+(e.g. a minimum-order rule implies a minimum-order attribute; a radius rule implies a \
+radius attribute).
+  (3) Status/lifecycle: anything the requirements describe as having states or \
+transitions gets an explicit status attribute with an enumerated set of allowed values.
+  (4) Relationships: model every association the requirements imply explicitly in the \
+datastore's idiom (edge, reference attribute, foreign key, partition/clustering \
+choice), so downstream consumers never have to invent linkages.
+- BOUNDED by the requirements, NOT by imagination: cover everything the requirements \
+imply, but do NOT invent entities or attributes the requirements never ask for. Where \
+practical, each entity/attribute should be justifiable by a specific requirement or rule.
+- SELF-AUDIT before returning: re-read the requirements, business rules and user \
+features; for every entity, rule and lifecycle state, confirm the schema can \
+represent it. If anything is missing, add it, then return the completed schema.
 
 Respond with STRICT JSON only, no prose, no markdown fences:
 {{
@@ -431,7 +522,7 @@ def deliberate(facts: dict, target: dict) -> dict:
             + "\n```\n"
             + ("Choose the datastore, then propose approaches, compare, and choose one."
                if undeclared else "Propose approaches, compare, and choose one."))
-    return _call_json(system, user, max_tokens=2500)
+    return _call_json_retry(system, user, max_tokens=DELIBERATE_MAX_TOKENS)
 
 
 def _target_from_family(family: str, product: str) -> dict:
@@ -466,7 +557,7 @@ def design(facts: dict, decision: dict, target: dict) -> dict:
                       "rationale": decision.get("rationale")}, indent=2, ensure_ascii=False)
         + "\n```\nProduce the schema for the chosen approach."
     )
-    return _call_json(system, user, max_tokens=MAX_TOKENS)
+    return _call_json_retry(system, user, max_tokens=SCHEMA_MAX_TOKENS)
 
 
 def generate_schema(inputs: dict) -> dict:
@@ -847,7 +938,15 @@ def main():
     ap.add_argument("--dir", default=None, help=f"shared folder (inputs in, outputs out). Overrides ${ENV_VAR}.")
     args = ap.parse_args()
 
-    result = run(shared_dir=args.dir)
+    try:
+        result = run(shared_dir=args.dir)
+    except TruncatedResponse:
+        raise SystemExit(
+            "The model's response was cut off (hit the token ceiling) even after a "
+            "retry, so no schema was written. Raise the budget and re-run: set "
+            "SCHEMA_GENERATE_MAX_TOKENS (e.g. 24000) and/or SCHEMA_DELIBERATE_MAX_TOKENS "
+            "(e.g. 8000) in your .env."
+        )
     schema, target = result["schema"], result["target"]
     print(f"Datastore: {target['name']} ({target['kind']})")
     print(f"Chosen approach: {result['decision'].get('chosen')}")

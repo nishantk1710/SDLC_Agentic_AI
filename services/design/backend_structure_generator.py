@@ -142,19 +142,55 @@ def _extract_routes(routes) -> list:
     return out
 
 
+def _extract_data_model(schema: dict) -> dict:
+    """Derive the authoritative data SHAPE the backend must respect, so it never
+    disagrees with the schema about where an entity's data physically lives.
+
+    Returns:
+      persisted_stores  — entities the schema persists as their OWN table/
+                          collection. These are the only ones that get a
+                          dedicated model + repository + (relational) migration.
+      embedded_entities — entities the schema stores INSIDE a parent aggregate
+                          (subdocuments/nested records). These must be accessed
+                          through the parent; they get NO store of their own.
+
+    Datastore-agnostic: relational tables never embed (embedded stays empty);
+    document schemas expose subdocuments as embedded; native schemas fall back
+    to the declared entity list.
+    """
+    persisted: list[str] = []
+    embedded: list[dict] = []
+
+    if isinstance(schema.get("tables"), list):            # relational — no embedding
+        persisted = [t.get("name") for t in schema["tables"] if t.get("name")]
+    elif isinstance(schema.get("collections"), list):     # document — find subdocuments
+        for c in schema["collections"]:
+            root = c.get("model") or c.get("name")
+            if root:
+                persisted.append(root)
+
+            def walk(fields, owner):
+                for f in fields or []:
+                    if f.get("fields"):                   # nested object => embedded
+                        embedded.append({"name": f.get("name"), "embedded_in": owner})
+                        walk(f["fields"], owner)          # deeper nesting still owned by root
+            walk(c.get("fields"), root)
+    elif isinstance(schema.get("entities"), list):        # native
+        persisted = list(schema["entities"])
+
+    return {"persisted_stores": persisted, "embedded_entities": embedded}
+
+
 def distill(inputs: dict) -> dict:
     """Only what's needed to shape a backend layout, to keep the prompt focused."""
     er = inputs["extracted_requirements"] or {}
     uf = inputs["user_features"] or {}
     schema = inputs["db_schema"] or {}
-    # entity/model/table names from whatever datastore the schema used
-    data_objects = []
-    if isinstance(schema.get("tables"), list):
-        data_objects = [t.get("name") for t in schema["tables"]]
-    elif isinstance(schema.get("collections"), list):
-        data_objects = [c.get("model") or c.get("name") for c in schema["collections"]]
-    elif isinstance(schema.get("entities"), list):
-        data_objects = schema["entities"]
+    # Authoritative data shape from the schema: which entities are their own
+    # store vs. embedded in a parent. This is what keeps the backend from
+    # modelling an embedded entity (e.g. a menu embedded in a restaurant) as a
+    # separate collection/table the schema never created.
+    dm = _extract_data_model(schema)
     return {
         "tech_stack": er.get("tech_stack", []),
         "constraints": er.get("constraints", []),
@@ -165,10 +201,14 @@ def distill(inputs: dict) -> dict:
         "roles": [r.get("role") for r in uf.get("roles", [])],
         "datastore": schema.get("datastore"),
         "datastore_product": schema.get("datastore_product"),
-        "data_objects": data_objects,
+        # persisted_stores == the data objects that get their own model/repository
+        "data_objects": dm["persisted_stores"],
+        "persisted_stores": dm["persisted_stores"],
+        "embedded_entities": dm["embedded_entities"],
         # Frontend alignment (empty when routes.json isn't present yet)
         "frontend_routes": _extract_routes(inputs.get("routes")),
     }
+
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +284,17 @@ entry file and directories the way that stack actually does.
 - Shape the data-access layer for the datastore: ORM entities + migrations for a \
 relational store; ODM models (e.g. Mongoose schemas) with no SQL migrations for a \
 document store; native client wrappers otherwise.
+- RESPECT THE SCHEMA'S DATA SHAPE. `persisted_stores` are the ONLY entities that \
+get their own data model / repository (their own table or collection). \
+`embedded_entities` are stored INSIDE a parent aggregate (subdocuments/nested \
+records) — each lists the parent it is `embedded_in`. Do NOT give an embedded \
+entity its own model, collection, table, migration, or repository: its data is \
+read and written THROUGH the parent store's model and repository. You MAY still \
+create a feature module (routes, controller, service) for behaviour around an \
+embedded entity when the features call for it, but that module's data access must \
+go through the owning aggregate — it must not declare a separate store. The schema \
+is the source of truth for where each entity's data physically lives; never \
+contradict it.
 - Include folders for the features/modules implied by the inputs, plus the \
 cross-cutting concerns the app needs (config, middleware, auth, validation, error \
 handling, tests) — only those that make sense for this app.
@@ -345,6 +396,49 @@ def validate_structure(structure: dict, facts: dict) -> list[str]:
     for concern in ("config", "route"):
         if concern not in blob and concern[:-1] not in blob:
             warnings.append(f"no obvious '{concern}' location in the tree")
+
+    # Embedded entities must NOT be given their own data store. Flag any
+    # model/schema/entity/repository/migration/collection file whose name matches
+    # an embedded entity — this is the schema-vs-backend "where does the data live"
+    # contradiction (e.g. a menu embedded in a restaurant handed its own model).
+    # Heuristic and warning-only, consistent with the rest of this validator.
+    def _norm(s: str) -> str:
+        return re.sub(r"[^a-z]", "", str(s).lower())
+
+    def _stem(s: str) -> str:
+        n = _norm(s)
+        if n.endswith("ies") and len(n) > 6:
+            return n[:-3] + "y"
+        for suf in ("es", "s"):
+            if n.endswith(suf) and len(n) - len(suf) >= 3:
+                return n[:-len(suf)]
+        return n
+
+    store_re = re.compile(r"(model|schema|entity|entities|repositor|migration|collection)")
+    # A store file whose name matches a PERSISTED store is legitimate (it's that
+    # store's own model/repository) — exclude it so an embedded field that merely
+    # shares a prefix with a real store (e.g. deliveryAddress vs. the Delivery
+    # collection) doesn't produce a false positive.
+    persisted_stems = {_stem(p) for p in (facts.get("persisted_stores") or [])}
+    store_keys = [k for k in keys
+                  if store_re.search(k) and _stem(k.split(".")[0]) not in persisted_stems]
+    for emb in (facts.get("embedded_entities") or []):
+        name = emb.get("name") if isinstance(emb, dict) else emb
+        parent = emb.get("embedded_in") if isinstance(emb, dict) else None
+        est = _stem(name or "")
+        if len(est) < 4:                       # too short/generic to match safely
+            continue
+        for k in store_keys:
+            ks = _stem(k.split(".")[0])         # file stem before the first dot
+            if len(ks) < 4:
+                continue
+            if ks == est or ks.startswith(est) or est.startswith(ks):
+                where = f" (embedded in {parent})" if parent else ""
+                warnings.append(
+                    f"'{k}' looks like a dedicated data store for embedded entity "
+                    f"'{name}'{where}; per the schema this data lives inside its parent "
+                    f"and should be accessed through it, not persisted separately")
+                break
     return warnings
 
 
