@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "test_cases",
+  "description": "Stage B output — concrete test cases per requirement (Testing Phase). Same shape whether produced by the direct-LLM planner or the ZenseAI MCP tool.",
+  "type": "object",
+  "required": ["schema_version", "test_cases"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "source": {
+      "type": "string",
+      "enum": ["direct_llm", "mcp", "cache"],
+      "description": "Which path produced the cases."
+    },
+    "test_cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "req_id", "type"],
+        "properties": {
+          "id": { "type": "string", "description": "e.g. TC-003-1" },
+          "req_id": { "type": "string", "description": "Requirement this case verifies." },
+          "type": {
+            "type": "string",
+            "enum": ["happy_path", "boundary", "invalid_input", "error_handling", "generated"],
+            "description": "'generated' = a full test file produced by the MCP genie (code carried in `expected.test_file`); the others are concrete derived cases."
+          },
+          "input": { "description": "Any JSON — the case input (call shape from the mapping tree)." },
+          "expected": { "description": "Any JSON — expected result, derived ONLY from requirements." },
+          "notes": { "type": "string" },
+          "target_symbols": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "grounding": {
+      "type": "object",
+      "description": "Refs dropped because they were not in the mapping tree / requirements.",
+      "properties": {
+        "invalid_symbol_refs": { "type": "array", "items": { "type": "string" } },
+        "cases_with_unknown_req": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "requirements_coverage": {
+      "type": "object",
+      "properties": {
+        "covered": { "type": "array", "items": { "type": "string" } },
+        "uncovered": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

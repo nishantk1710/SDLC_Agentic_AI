@@ -45,3 +45,6 @@ contracts/shared/zipped_code/**
 !contracts/shared/design-artifact/**/
 !contracts/shared/zipped_code/**/
 !contracts/shared/**/.gitkeep
+
+# Testing phase — Stage B derivation cache
+services/testing/data/.cache/

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "test_strategy",
+  "description": "A3 output — what to test and where (Module A). Superset of the zenseAi reference test_strategy: adds target_symbols + related_requirements.",
+  "type": "object",
+  "required": ["test_files_impacted", "test_coverage_impact", "historical_test_risks"],
+  "properties": {
+    "test_files_impacted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["test_file_path", "test_type", "priority"],
+        "properties": {
+          "test_file_path": { "type": "string" },
+          "test_type": {
+            "type": "string",
+            "enum": ["Unit Test", "Integration Test", "E2E Test", "Performance Test", "Load Test"]
+          },
+          "what_needs_testing": { "type": "string" },
+          "existing_or_new": {
+            "type": "string",
+            "enum": ["New - needs creation", "Existing - needs update"]
+          },
+          "priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+          "target_symbols": { "type": "array", "items": { "type": "string" } },
+          "related_requirements": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "test_coverage_impact": { "type": "string" },
+    "historical_test_risks": { "type": "string" },
+    "grounding": {
+      "type": "object",
+      "description": "F1 — refs in the strategy that did NOT exist in A2 mapping tree / requirements and were dropped.",
+      "properties": {
+        "invalid_symbol_refs": { "type": "array", "items": { "type": "string" } },
+        "invalid_requirement_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "requirements_coverage": {
+      "type": "object",
+      "description": "F2 — which requirement ids are covered by >=1 grounded entry vs. left uncovered.",
+      "properties": {
+        "covered": { "type": "array", "items": { "type": "string" } },
+        "uncovered": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

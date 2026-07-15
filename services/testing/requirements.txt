@@ -4,6 +4,18 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.4
 pydantic-settings==2.7.1
 
+# Interface Extraction (Stage A) + Test-Case Derivation (Stage B)
+# A3/B LLM calls (lazy-imported; only a real LLM run needs it):
+litellm==1.91.3
+# Stage B — ZenseAI MCP client (lazy-imported; only used when TESTING_MCP_URL is
+# set, i.e. the real MCP tool is wired). Matches the ZenseAI server's pin.
+fastmcp==2.12.4
+# A1 polyglot chunking via tree-sitter (grammar bundled in-wheel; parses
+# offline). Python uses the stdlib `ast` and needs none of these.
+tree-sitter==0.26.0
+tree-sitter-javascript==0.25.0
+tree-sitter-typescript==0.23.2
+
 # dev / test
 pytest==8.3.4
 httpx==0.28.1
