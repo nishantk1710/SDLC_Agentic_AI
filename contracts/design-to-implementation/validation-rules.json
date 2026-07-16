@@ -1,0 +1,683 @@
+{
+  "registerUser": {
+    "firstName": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "First name is required."
+    },
+    "lastName": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Last name is required."
+    },
+    "email": {
+      "type": "email",
+      "message": "Enter a valid email address."
+    },
+    "phone": {
+      "type": "tel",
+      "pattern": "^\\+?[1-9]\\d{6,14}$",
+      "message": "Enter a valid phone number in international format (e.g. +14155550101)."
+    },
+    "password": {
+      "required": true,
+      "type": "string",
+      "minLength": 8,
+      "message": "Password must be at least 8 characters."
+    },
+    "confirm": {
+      "matches": "password",
+      "message": "Passwords do not match."
+    },
+    "role": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "customer",
+        "restaurantManager",
+        "deliveryAgent"
+      ],
+      "message": "Role must be one of: customer, restaurantManager, or deliveryAgent."
+    }
+  },
+  "loginUser": {
+    "email": {
+      "type": "email",
+      "message": "Enter a valid email address."
+    },
+    "phone": {
+      "type": "tel",
+      "pattern": "^\\+?[1-9]\\d{6,14}$",
+      "message": "Enter a valid phone number in international format (e.g. +14155550101)."
+    },
+    "password": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Password is required."
+    }
+  },
+  "verifyAccount": {
+    "token": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Verification token is required."
+    }
+  },
+  "resendVerification": {
+    "email": {
+      "type": "email",
+      "message": "Enter a valid email address."
+    },
+    "phone": {
+      "type": "tel",
+      "pattern": "^\\+?[1-9]\\d{6,14}$",
+      "message": "Enter a valid phone number in international format (e.g. +14155550101)."
+    }
+  },
+  "resetPassword": {
+    "token": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Reset token is required."
+    },
+    "newPassword": {
+      "required": true,
+      "type": "string",
+      "minLength": 8,
+      "message": "New password must be at least 8 characters."
+    },
+    "confirm": {
+      "matches": "newPassword",
+      "message": "Passwords do not match."
+    }
+  },
+  "updateMyProfile": {
+    "firstName": {
+      "type": "string",
+      "minLength": 1,
+      "message": "First name must not be empty."
+    },
+    "lastName": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Last name must not be empty."
+    },
+    "avatarUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the avatar."
+    },
+    "pushToken": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Push token must not be empty."
+    },
+    "notificationPreferences.pushEnabled": {
+      "type": "boolean",
+      "message": "Push notification preference must be true or false."
+    },
+    "notificationPreferences.smsEnabled": {
+      "type": "boolean",
+      "message": "SMS notification preference must be true or false."
+    },
+    "notificationPreferences.emailEnabled": {
+      "type": "boolean",
+      "message": "Email notification preference must be true or false."
+    }
+  },
+  "UpdateAgentProfileRequest": {
+    "vehicleType": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Vehicle type must not be empty."
+    },
+    "licencePlate": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Licence plate must not be empty."
+    },
+    "isAvailable": {
+      "type": "boolean",
+      "message": "Availability must be true or false."
+    }
+  },
+  "AddressRequest": {
+    "label": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Address label is required."
+    },
+    "line1": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Address line 1 is required."
+    },
+    "line2": {
+      "type": "string",
+      "message": "Address line 2 must be a string."
+    },
+    "city": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "City is required."
+    },
+    "postcode": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Postcode is required."
+    },
+    "countryCode": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 3,
+      "message": "Country code must be a 2- or 3-letter ISO code."
+    },
+    "coordinates.lat": {
+      "required": true,
+      "type": "number",
+      "min": -90,
+      "max": 90,
+      "message": "Latitude must be a number between -90 and 90."
+    },
+    "coordinates.lng": {
+      "required": true,
+      "type": "number",
+      "min": -180,
+      "max": 180,
+      "message": "Longitude must be a number between -180 and 180."
+    },
+    "isDefault": {
+      "type": "boolean",
+      "message": "Default address flag must be true or false."
+    }
+  },
+  "CreateRestaurantRequest": {
+    "name": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Restaurant name is required."
+    },
+    "description": {
+      "type": "string",
+      "message": "Description must be a string."
+    },
+    "cuisineTypes": {
+      "required": true,
+      "type": "array",
+      "message": "At least one cuisine type is required."
+    },
+    "logoUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the logo."
+    },
+    "bannerUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the banner."
+    },
+    "address.label": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Address label is required."
+    },
+    "address.line1": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Address line 1 is required."
+    },
+    "address.line2": {
+      "type": "string",
+      "message": "Address line 2 must be a string."
+    },
+    "address.city": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "City is required."
+    },
+    "address.postcode": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Postcode is required."
+    },
+    "address.countryCode": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 3,
+      "message": "Country code must be a 2- or 3-letter ISO code."
+    },
+    "deliveryRadiusKm": {
+      "required": true,
+      "type": "number",
+      "min": 0,
+      "message": "Delivery radius must be a non-negative number."
+    },
+    "deliveryFee": {
+      "required": true,
+      "type": "number",
+      "min": 0,
+      "message": "Delivery fee must be a non-negative number."
+    },
+    "minimumOrderValue": {
+      "required": true,
+      "type": "number",
+      "min": 0,
+      "message": "Minimum order value must be a non-negative number."
+    },
+    "estimatedDeliveryTimeMinutes": {
+      "required": true,
+      "type": "integer",
+      "min": 1,
+      "message": "Estimated delivery time must be a positive whole number of minutes."
+    },
+    "isCodAllowed": {
+      "required": true,
+      "type": "boolean",
+      "message": "Cash on delivery allowance must be true or false."
+    },
+    "commissionRate": {
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "message": "Commission rate must be a number between 0 and 100."
+    }
+  },
+  "UpdateRestaurantRequest": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Restaurant name must not be empty."
+    },
+    "description": {
+      "type": "string",
+      "message": "Description must be a string."
+    },
+    "cuisineTypes": {
+      "type": "array",
+      "message": "Cuisine types must be an array of strings."
+    },
+    "logoUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the logo."
+    },
+    "bannerUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the banner."
+    },
+    "deliveryRadiusKm": {
+      "type": "number",
+      "min": 0,
+      "message": "Delivery radius must be a non-negative number."
+    },
+    "deliveryFee": {
+      "type": "number",
+      "min": 0,
+      "message": "Delivery fee must be a non-negative number."
+    },
+    "minimumOrderValue": {
+      "type": "number",
+      "min": 0,
+      "message": "Minimum order value must be a non-negative number."
+    },
+    "estimatedDeliveryTimeMinutes": {
+      "type": "integer",
+      "min": 1,
+      "message": "Estimated delivery time must be a positive whole number of minutes."
+    },
+    "isCodAllowed": {
+      "type": "boolean",
+      "message": "Cash on delivery allowance must be true or false."
+    },
+    "commissionRate": {
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "message": "Commission rate must be a number between 0 and 100."
+    }
+  },
+  "ToggleOpenRequest": {
+    "isOpen": {
+      "required": true,
+      "type": "boolean",
+      "message": "Open status must be true or false."
+    }
+  },
+  "MenuCategoryRequest": {
+    "name": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Category name is required."
+    },
+    "description": {
+      "type": "string",
+      "message": "Description must be a string."
+    },
+    "sortOrder": {
+      "type": "integer",
+      "min": 0,
+      "message": "Sort order must be a non-negative whole number."
+    }
+  },
+  "MenuItemRequest": {
+    "name": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Item name is required."
+    },
+    "description": {
+      "type": "string",
+      "message": "Description must be a string."
+    },
+    "price": {
+      "required": true,
+      "type": "number",
+      "min": 0,
+      "message": "Price must be a non-negative number."
+    },
+    "imageUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the item image."
+    },
+    "isAvailable": {
+      "type": "boolean",
+      "message": "Availability must be true or false."
+    },
+    "allergens": {
+      "type": "array",
+      "message": "Allergens must be a list of strings."
+    },
+    "dietaryTags": {
+      "type": "array",
+      "message": "Dietary tags must be a list of strings."
+    }
+  },
+  "ToggleMenuItemAvailabilityRequest": {
+    "isAvailable": {
+      "required": true,
+      "type": "boolean",
+      "message": "Availability must be true or false."
+    }
+  },
+  "UpsertCartItemRequest": {
+    "menuItemId": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Menu item ID is required."
+    },
+    "quantity": {
+      "required": true,
+      "type": "integer",
+      "min": 0,
+      "message": "Quantity must be a non-negative whole number."
+    }
+  },
+  "SetCartFulfillmentRequest": {
+    "fulfillmentType": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "delivery",
+        "pickup"
+      ],
+      "message": "Fulfillment type must be either delivery or pickup."
+    },
+    "deliveryAddressId": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Delivery address ID must not be empty."
+    }
+  },
+  "CheckoutRequest": {
+    "paymentMethod": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "card",
+        "digitalWallet",
+        "cashOnDelivery"
+      ],
+      "message": "Payment method must be one of: card, digitalWallet, or cashOnDelivery."
+    },
+    "gatewayPaymentToken": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Gateway payment token must not be empty."
+    },
+    "fulfillmentType": {
+      "type": "string",
+      "enum": [
+        "delivery",
+        "pickup"
+      ],
+      "message": "Fulfillment type must be either delivery or pickup."
+    },
+    "deliveryAddressId": {
+      "type": "string",
+      "minLength": 1,
+      "message": "Delivery address ID must not be empty."
+    }
+  },
+  "OrderCancelRequest": {
+    "reason": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "A cancellation reason is required."
+    }
+  },
+  "OrderAcceptRequest": {
+    "estimatedPrepTimeMinutes": {
+      "type": "integer",
+      "min": 1,
+      "message": "Estimated prep time must be a positive whole number of minutes."
+    }
+  },
+  "OrderRejectRequest": {
+    "reason": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "A rejection reason is required."
+    }
+  },
+  "OrderAdvanceRequest": {
+    "status": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "preparing",
+        "ready"
+      ],
+      "message": "Status must be either preparing or ready."
+    }
+  },
+  "RefundRequest": {
+    "amount": {
+      "required": true,
+      "type": "number",
+      "min": 0.01,
+      "message": "Refund amount must be greater than zero."
+    },
+    "reason": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "A refund reason is required."
+    }
+  },
+  "AgentRespondJobRequest": {
+    "decision": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "accept",
+        "decline"
+      ],
+      "message": "Decision must be either accept or decline."
+    }
+  },
+  "AgentLocationUpdateRequest": {
+    "location.lat": {
+      "required": true,
+      "type": "number",
+      "min": -90,
+      "max": 90,
+      "message": "Latitude must be a number between -90 and 90."
+    },
+    "location.lng": {
+      "required": true,
+      "type": "number",
+      "min": -180,
+      "max": 180,
+      "message": "Longitude must be a number between -180 and 180."
+    }
+  },
+  "AgentCompleteDeliveryRequest": {
+    "proofOfDeliveryUrl": {
+      "type": "url",
+      "message": "Enter a valid URL for the proof of delivery."
+    }
+  },
+  "CreateReviewRequest": {
+    "orderId": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Order ID is required."
+    },
+    "rating": {
+      "required": true,
+      "type": "integer",
+      "min": 1,
+      "max": 5,
+      "message": "Rating must be a whole number between 1 and 5."
+    },
+    "comment": {
+      "type": "string",
+      "message": "Comment must be a string."
+    }
+  },
+  "RemoveReviewRequest": {
+    "reason": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "A removal reason is required."
+    }
+  },
+  "CreateDisputeRequest": {
+    "orderId": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Order ID is required."
+    },
+    "description": {
+      "required": true,
+      "type": "string",
+      "minLength": 1,
+      "message": "Dispute description is required."
+    }
+  },
+  "ResolveDisputeRequest": {
+    "resolution": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "resolvedRefunded",
+        "resolvedNoAction"
+      ],
+      "message": "Resolution must be either resolvedRefunded or resolvedNoAction."
+    },
+    "resolutionNote": {
+      "type": "string",
+      "message": "Resolution note must be a string."
+    },
+    "refundAmount": {
+      "type": "number",
+      "min": 0,
+      "message": "Refund amount must be a non-negative number."
+    }
+  },
+  "UpdateUserStatusRequest": {
+    "status": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "active",
+        "suspended"
+      ],
+      "message": "Status must be either active or suspended."
+    }
+  },
+  "UpdateRestaurantStatusRequest": {
+    "status": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "active",
+        "suspended",
+        "inactive"
+      ],
+      "message": "Status must be one of: active, suspended, or inactive."
+    }
+  },
+  "UpdatePlatformConfigRequest": {
+    "defaultCommissionRate": {
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "message": "Default commission rate must be a number between 0 and 100."
+    },
+    "serviceFee": {
+      "type": "number",
+      "min": 0,
+      "message": "Service fee must be a non-negative number."
+    },
+    "defaultDeliveryRadiusKm": {
+      "type": "number",
+      "min": 0,
+      "message": "Default delivery radius must be a non-negative number."
+    },
+    "sessionTokenTtlSeconds": {
+      "type": "integer",
+      "min": 1,
+      "message": "Session token TTL must be a positive whole number of seconds."
+    },
+    "accountLockDurationSeconds": {
+      "type": "integer",
+      "min": 1,
+      "message": "Account lock duration must be a positive whole number of seconds."
+    },
+    "agentOfferTimeoutSeconds": {
+      "type": "integer",
+      "min": 1,
+      "message": "Agent offer timeout must be a positive whole number of seconds."
+    },
+    "cancellationChargePct": {
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "message": "Cancellation charge percentage must be a number between 0 and 100."
+    },
+    "maxFailedLoginAttempts": {
+      "type": "integer",
+      "min": 1,
+      "message": "Maximum failed login attempts must be a positive whole number."
+    }
+  }
+}
