@@ -139,6 +139,36 @@ class BaseHandler:
         ]
 
 
+class FullStackHandler(BaseHandler):
+    """Backend + frontend in one repo: generate cases for BOTH tiers, matching
+    each case to its target symbol's language. Not MCP-backed (the ZenseAI genie
+    is Python-only and cannot cover the frontend)."""
+
+    key = "full_stack"
+    mcp_capable = False
+
+    def matches(self, profile: StackProfile) -> bool:
+        return bool(profile.full_stack)
+
+    def extra_guidance(self, profile: StackProfile) -> str:
+        fe = profile.frontend_framework or "react"
+        return (
+            f"FULL-STACK APP: a {profile.language} backend AND a {fe} frontend. Generate "
+            "cases for BOTH tiers, matching each case to its TARGET SYMBOL's language:\n"
+            "  - Backend symbols (e.g. .py): API/Contract cases as {method, path, body} -> "
+            "{status_code, json}; pure functions as {args} -> return value or "
+            '{"raises": ...}.\n'
+            f"  - Frontend symbols (.jsx/.tsx {fe} components/pages): Component cases describing "
+            "props / initial state / user interactions -> expected rendered text, roles, or "
+            "navigation (React Testing Library style; mock network).\n"
+            "  - Include at least one END-TO-END case for the primary user journey, described "
+            "as ordered UI steps with expected assertions.\n"
+            "Every requirement must get cases in its correct tier: backend requirements -> "
+            "backend cases; UI/frontend requirements -> component/E2E cases. Do NOT skip the "
+            "frontend."
+        )
+
+
 class PythonHandler(BaseHandler):
     key = "python"
     mcp_capable = True  # the ZenseAI Python test-case genie can back this handler
@@ -174,8 +204,8 @@ class NodeHandler(BaseHandler):
         )
 
 
-# ordered registry; generic (BaseHandler) MUST stay last as the catch-all
-_REGISTRY: List[BaseHandler] = [PythonHandler(), NodeHandler(), BaseHandler()]
+# ordered registry; FullStack first (most specific), generic (BaseHandler) last
+_REGISTRY: List[BaseHandler] = [FullStackHandler(), PythonHandler(), NodeHandler(), BaseHandler()]
 
 
 def register_handler(handler: BaseHandler) -> None:

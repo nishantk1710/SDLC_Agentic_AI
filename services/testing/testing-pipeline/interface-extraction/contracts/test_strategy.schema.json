@@ -14,7 +14,7 @@
           "test_file_path": { "type": "string" },
           "test_type": {
             "type": "string",
-            "enum": ["Unit Test", "Integration Test", "E2E Test", "Performance Test", "Load Test"]
+            "enum": ["Unit Test", "API/Contract Test", "Integration Test", "Component Test", "E2E Test", "Performance Test", "Load Test"]
           },
           "what_needs_testing": { "type": "string" },
           "existing_or_new": {

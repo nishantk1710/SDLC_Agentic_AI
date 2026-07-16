@@ -96,23 +96,58 @@ def _callee_name(func: ast.AST) -> Optional[str]:
     return None
 
 
-def _iter_call_names(node: ast.AST, skip_nested_defs: bool):
-    """Yield callee names inside ``node``.
+def _exc_name(exc: ast.AST) -> Optional[str]:
+    """Short name of the exception in a ``raise <exc>`` statement."""
+    if isinstance(exc, ast.Call):
+        return _callee_name(exc.func)
+    if isinstance(exc, ast.Name):
+        return exc.id
+    if isinstance(exc, ast.Attribute):
+        return exc.attr
+    return None
 
-    When ``skip_nested_defs`` is set we do not descend into nested
-    function/class definitions — used for a *class* chunk so a class's calls
-    don't absorb its methods' calls (methods are their own chunks).
+
+def _extract_calls_and_raises(node: ast.AST, skip_nested_defs: bool):
+    """Return ``(calls, raises)`` inside ``node``.
+
+    A ``raise Foo(...)`` contributes ``Foo`` to *raises*, not *calls* — so
+    exception constructors no longer pollute the call graph (this also removes
+    the old false ``validate_age -> AgeValidationError`` style edge). When
+    ``skip_nested_defs`` is set we do not descend into nested function/class
+    definitions (used for a *class* chunk so it doesn't absorb its methods').
     """
-    for child in ast.iter_child_nodes(node):
-        if skip_nested_defs and isinstance(
-            child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-        ):
-            continue
-        if isinstance(child, ast.Call):
-            name = _callee_name(child.func)
-            if name:
-                yield name
-        yield from _iter_call_names(child, skip_nested_defs)
+    calls: List[str] = []
+    raises: List[str] = []
+    # Don't count this symbol's own decorators (e.g. @app.post("/x")) as calls.
+    skip_ids = {id(d) for d in getattr(node, "decorator_list", [])}
+
+    def rec(n: ast.AST) -> None:
+        for child in ast.iter_child_nodes(n):
+            if id(child) in skip_ids:
+                continue
+            if skip_nested_defs and isinstance(
+                child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if isinstance(child, ast.Raise):
+                if child.exc is not None:
+                    nm = _exc_name(child.exc)
+                    if nm:
+                        raises.append(nm)
+                    # recurse into the raise EXCEPT its exception node, so the
+                    # exception constructor isn't also counted as a call
+                    for sub in ast.iter_child_nodes(child):
+                        if sub is not child.exc:
+                            rec(sub)
+                continue
+            if isinstance(child, ast.Call):
+                nm = _callee_name(child.func)
+                if nm:
+                    calls.append(nm)
+            rec(child)
+
+    rec(node)
+    return _dedup(calls), _dedup(raises)
 
 
 def _dedup(seq: List[str]) -> List[str]:
@@ -154,6 +189,52 @@ def _content_of(source: str, node: ast.AST) -> str:
     return "\n".join(lines[start:end])
 
 
+# HTTP verbs used as decorator attributes by FastAPI/Starlette/Flask routers.
+_HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options"}
+
+
+def _decorator_text(dec: ast.AST) -> str:
+    try:
+        return ast.unparse(dec)
+    except Exception:
+        return ""
+
+
+def _parse_route(dec: ast.AST):
+    """Detect an HTTP route decorator -> ``(method, path)`` or ``(None, None)``.
+
+    Handles FastAPI/Starlette (``@app.post("/x")``, ``@router.get("/x")``) and
+    Flask (``@app.route("/x", methods=["POST"])``).
+    """
+    if not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute):
+        return None, None
+    attr = dec.func.attr.lower()
+    path = None
+    if dec.args and isinstance(dec.args[0], ast.Constant) and isinstance(dec.args[0].value, str):
+        path = dec.args[0].value
+    if attr in _HTTP_METHODS:
+        return attr.upper(), path
+    if attr == "route":  # Flask-style: method(s) in a keyword
+        method = "GET"
+        for kw in dec.keywords:
+            if kw.arg == "methods" and isinstance(kw.value, (ast.List, ast.Tuple)):
+                vals = [e.value for e in kw.value.elts if isinstance(e, ast.Constant)]
+                if vals:
+                    method = str(vals[0]).upper()
+        return method, path
+    return None, None
+
+
+def _endpoint_info(node: ast.AST):
+    """Return ``(decorators, is_endpoint, http_method, route)`` for a def node."""
+    decorators = [_decorator_text(d) for d in getattr(node, "decorator_list", [])]
+    for dec in getattr(node, "decorator_list", []):
+        method, path = _parse_route(dec)
+        if method:
+            return decorators, True, method, path
+    return decorators, False, None, None
+
+
 def chunk_python_source(path: str, content: str) -> List[Chunk]:
     """Parse one Python file into symbol-level chunks."""
     try:
@@ -166,6 +247,8 @@ def chunk_python_source(path: str, content: str) -> List[Chunk]:
     chunks: List[Chunk] = []
 
     def emit(node, symbol_type: str, qualname: str, signature: str, skip_nested: bool):
+        calls, raises = _extract_calls_and_raises(node, skip_nested_defs=skip_nested)
+        decorators, is_endpoint, http_method, route = _endpoint_info(node)
         chunks.append(
             {
                 "symbol_id": f"{path}::{qualname}",
@@ -176,7 +259,12 @@ def chunk_python_source(path: str, content: str) -> List[Chunk]:
                 "content": _content_of(content, node),
                 "start_line": getattr(node, "lineno", None),
                 "end_line": getattr(node, "end_lineno", None),
-                "calls": _dedup(list(_iter_call_names(node, skip_nested_defs=skip_nested))),
+                "calls": calls,
+                "raises": raises,           # exception types raised (from `raise X(...)`)
+                "decorators": decorators,   # decorator source strings
+                "is_endpoint": is_endpoint,  # HTTP route decorator present
+                "http_method": http_method,  # e.g. "POST" (None if not an endpoint)
+                "route": route,              # e.g. "/api/checkout" (None if not an endpoint)
                 "is_test": test_flag,
             }
         )

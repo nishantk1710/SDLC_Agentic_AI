@@ -45,6 +45,8 @@ from source_loader import load_source  # noqa: E402
 
 # Stages A/B — flat modules on sys.path with unique names so they do not collide
 # with each other or the Source Loader Service's modules.
+import ie_config  # noqa: E402
+import tcd_config  # noqa: E402
 from interface_extraction import run_interface_extraction  # noqa: E402
 from test_case_derivation import run_test_case_derivation  # noqa: E402
 
@@ -54,13 +56,41 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Testing Phase Pipeline", version="0.1.0")
 
 
+def _reset_data_outputs() -> None:
+    """Delete all generated artifacts under data/ so every run starts fresh.
+
+    Everything under data/ is treated as pipeline OUTPUT: the stage artifacts
+    below plus the derivation cache and the generated summary. Inputs
+    (``data/input/*``, re-populated by the Source Loader each run) and structure
+    placeholders (``.gitkeep``) are left untouched.
+    """
+    import shutil
+
+    outputs = [
+        ie_config.CHUNKS_PATH,
+        ie_config.MAPPING_TREE_PATH,
+        ie_config.STRATEGY_PATH,
+        ie_config.REQUIREMENTS_PATH,
+        ie_config.TECH_STACK_PATH,
+        tcd_config.TEST_CASES_PATH,
+    ]
+    for p in outputs:
+        Path(p).unlink(missing_ok=True)
+    shutil.rmtree(tcd_config.CACHE_DIR, ignore_errors=True)
+    logger.info("Reset data/ outputs — fresh run.")
+
+
 def run_pipeline() -> dict:
     """Execute the testing pipeline and return one combined result.
 
-    Today this runs Stage 0 (source loading) and Stage A (interface extraction);
-    stages B–F are appended here as they are built, feeding the ``verdict`` this
-    eventually returns.
+    Runs Stage 0 (source loading) -> Stage A (interface extraction) -> Stage B
+    (test-case derivation); stages C–F are appended here as they are built.
+    Every run first clears all generated artifacts under data/ so outputs never
+    mix with a previous run.
     """
+    # --- Fresh outputs: clear everything generated under data/ ---
+    _reset_data_outputs()
+
     # --- Stage 0: Source Loader Service (in-process) ---
     source = load_source()
     srs = load_srs()
@@ -88,6 +118,7 @@ def run_pipeline() -> dict:
         mapping_tree=ia_data["mapping_tree"],
         strategy=ia_data["test_strategy"],
         tech_stack=ia_data["tech_stack"],
+        use_cache=False,  # every run derives fresh (see _reset_data_outputs)
     )
     logger.info("Stage B (test-case derivation) OK: %s", derivation["summary"])
 

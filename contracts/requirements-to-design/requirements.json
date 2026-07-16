@@ -1,0 +1,135 @@
+[
+  {
+    "id": "REQ-1",
+    "text": "A user can register with either an email or a mobile number, plus a password.",
+    "acceptance_criteria": [
+      "reject registration when no password is provided (400)",
+      "reject registration when neither email nor mobile is provided (400)",
+      "accept registration with email + password and return a user_id",
+      "never store the raw password (store only a hash)"
+    ]
+  },
+  {
+    "id": "REQ-4",
+    "text": "After five consecutive failed login attempts, the account is locked.",
+    "acceptance_criteria": [
+      "lock the account on the 5th consecutive failed login",
+      "a locked account returns 403 on subsequent login attempts",
+      "a successful login resets the consecutive-failure count to zero"
+    ]
+  },
+  {
+    "id": "REQ-5",
+    "text": "A password reset link is single-use and time-limited.",
+    "acceptance_criteria": [
+      "reject an unknown/invalid reset token (400)",
+      "reject a reset token that has already been used (400)",
+      "reject an expired reset token (400)",
+      "accept a valid, unused, unexpired reset token"
+    ]
+  },
+  {
+    "id": "REQ-9",
+    "text": "The restaurant listing shows only open restaurants and supports sorting by rating and by delivery time.",
+    "acceptance_criteria": [
+      "exclude restaurants whose status is not 'open'",
+      "sort_by=rating returns the highest average_rating first",
+      "sort_by=delivery_time returns the lowest estimated_delivery_time first"
+    ]
+  },
+  {
+    "id": "REQ-12",
+    "text": "A menu item exposes its availability, and an unknown item id returns not-found.",
+    "acceptance_criteria": [
+      "return 404 for an unknown menu item id",
+      "return the item with its availability flag for a known id"
+    ]
+  },
+  {
+    "id": "REQ-14",
+    "text": "The cart rejects unavailable items and does not allow combining items from more than one restaurant.",
+    "acceptance_criteria": [
+      "reject adding an item whose available flag is false (400)",
+      "reject adding an item from a different restaurant than the cart's current restaurant (400)"
+    ]
+  },
+  {
+    "id": "REQ-16",
+    "text": "Checkout is blocked only when the subtotal is BELOW the restaurant's minimum order value; a subtotal exactly equal to the minimum is allowed.",
+    "acceptance_criteria": [
+      "reject checkout when subtotal is strictly less than the minimum (400)",
+      "allow checkout when subtotal equals the minimum order value",
+      "allow checkout when subtotal is greater than the minimum"
+    ]
+  },
+  {
+    "id": "REQ-21",
+    "text": "Payments support card and cash-on-delivery; raw card data is never persisted.",
+    "acceptance_criteria": [
+      "reject cash-on-delivery when the restaurant does not permit it (400)",
+      "for card payments store only a tokenized reference, never the raw card number",
+      "report that raw card data was not persisted"
+    ]
+  },
+  {
+    "id": "REQ-25",
+    "text": "Delivery assignment picks the closest available agent, breaking ties by lowest current load.",
+    "acceptance_criteria": [
+      "choose the agent with the smallest distance_km",
+      "when distances tie, choose the agent with the lowest current_load"
+    ]
+  },
+  {
+    "id": "REQ-27",
+    "text": "Order status may only advance one step along Accepted -> Preparing -> Ready -> Out for Delivery -> Delivered.",
+    "acceptance_criteria": [
+      "allow a transition to the immediate next status",
+      "reject a transition that skips a status",
+      "reject a transition involving an unknown status"
+    ]
+  },
+  {
+    "id": "REQ-31",
+    "text": "A delivered order accepts exactly one review with a rating between 1 and 5 inclusive.",
+    "acceptance_criteria": [
+      "reject a rating below 1 or above 5 (400)",
+      "reject a second review for the same order (400)",
+      "accept a valid first review with a rating from 1 to 5"
+    ]
+  },
+  {
+    "id": "REQ-F1",
+    "text": "Frontend user journey: signing up lands the user on the restaurants page (primary E2E flow).",
+    "acceptance_criteria": [
+      "submitting the signup form (email + password) calls the register API",
+      "on success the app navigates to /restaurants",
+      "the /restaurants page renders a welcome heading with id 'welcome-msg' containing 'Welcome'"
+    ]
+  },
+  {
+    "id": "REQ-F2",
+    "text": "Frontend: the signup page shows an error and stays on the page when registration fails.",
+    "acceptance_criteria": [
+      "on API failure an error message (.field-error) is shown to the user",
+      "the app does not navigate away when signup fails"
+    ]
+  },
+  {
+    "id": "REQ-F3",
+    "text": "Frontend: the restaurants page fetches and lists the available restaurants.",
+    "acceptance_criteria": [
+      "on mount it calls the list-restaurants API",
+      "each restaurant renders as a link to /restaurants/:id showing name, cuisine and rating",
+      "on API error it renders an empty list without crashing"
+    ]
+  },
+  {
+    "id": "REQ-F4",
+    "text": "Frontend: the checkout page confirms an order and navigates to the confirmation page.",
+    "acceptance_criteria": [
+      "clicking Confirm Order calls checkout then confirm-order APIs",
+      "on success the app navigates to /order-confirmation",
+      "on failure an error message (.field-error) is shown"
+    ]
+  }
+]

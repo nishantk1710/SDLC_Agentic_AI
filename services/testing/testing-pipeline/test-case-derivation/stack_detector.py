@@ -68,10 +68,12 @@ class StackProfile:
     test_framework: str = ""       # pytest | jest | JUnit 5 | ...
     conventions: str = ""          # short guidance injected into the LLM prompt
     detected_from: str = ""        # tech_stack | mapping_tree | default
+    full_stack: bool = False       # a backend AND a frontend are both present
+    frontend_framework: str = ""   # react | angular | vue (when full_stack)
 
     @property
     def key(self) -> str:
-        """Handler-selection key (the canonical language)."""
+        """Handler-selection key (the canonical *backend* language)."""
         return self.language or "unknown"
 
     def as_dict(self) -> Dict[str, Any]:
@@ -131,6 +133,11 @@ def detect_stack(
         or ("", "Use the language's standard unit-test framework and idiomatic assertions.")
     )
 
+    # full-stack: an explicit frontend descriptor accompanies the backend stack
+    frontend = ts.get("frontend") or {}
+    frontend_framework = str(frontend.get("framework", "")).lower() if isinstance(frontend, dict) else ""
+    full_stack = bool(ts.get("full_stack")) or (bool(frontend_framework) and language in _BACKEND_LANGS)
+
     return StackProfile(
         language=language,
         framework=framework,
@@ -138,4 +145,6 @@ def detect_stack(
         test_framework=test_framework,
         conventions=conventions,
         detected_from=detected_from,
+        full_stack=full_stack,
+        frontend_framework=frontend_framework,
     )

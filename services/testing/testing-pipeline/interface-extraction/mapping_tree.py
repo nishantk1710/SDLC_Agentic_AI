@@ -64,6 +64,11 @@ def build_mapping_tree(chunks: List[Chunk]) -> MappingTree:
             "start_line": ch.get("start_line"),
             "end_line": ch.get("end_line"),
             "is_test": ch.get("is_test", False),
+            # A1 interface signals (used by A3 to classify test type / risk)
+            "is_endpoint": ch.get("is_endpoint", False),
+            "http_method": ch.get("http_method"),
+            "route": ch.get("route"),
+            "raises": ch.get("raises", []) or [],
             "calls": [],           # resolved internal targets
             "called_by": [],       # reverse edges
             "external_calls": [],  # unresolved callee names

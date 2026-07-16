@@ -109,12 +109,57 @@ def read_requirements(root: Path = SRS_DIR) -> List[Dict[str, Any]]:
 _LANG_TO_RUNTIME = {"python": "python", "javascript": "node", "typescript": "node", "java": "java"}
 
 
-def infer_tech_stack(source_files: List[Dict[str, str]]) -> Dict[str, str]:
-    """Best-effort tech_stack from the dominant source language (for A3's F4)."""
+def infer_tech_stack(source_files: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Best-effort tech_stack from the source — full-stack aware.
+
+    Detects the backend framework and whether a React frontend is present by a
+    light content/extension scan, so a full-stack repo is reported as such (not
+    collapsed to whichever language has the most files). Shape::
+
+        {"runtime": "python", "framework": "fastapi",
+         "frontend": {"present": true, "framework": "react"},
+         "full_stack": true}
+    """
     counts: Dict[str, int] = {}
+    backend_framework = ""
+    frontend_framework = ""
+    has_python = has_express = False
+
     for f in source_files:
-        counts[f.get("language", "")] = counts.get(f.get("language", ""), 0) + 1
+        lang = (f.get("language") or "").lower()
+        counts[lang] = counts.get(lang, 0) + 1
+        content = (f.get("content") or "").lower()
+        path = (f.get("path") or "").lower()
+
+        if lang == "python":
+            has_python = True
+            for marker in ("fastapi", "flask", "django"):
+                if marker in content and not backend_framework:
+                    backend_framework = marker
+        if lang in ("javascript", "typescript"):
+            if path.endswith((".jsx", ".tsx")) or "from \"react\"" in content or "from 'react'" in content or "react-dom" in content:
+                frontend_framework = "react"
+            if "require('express')" in content or 'require("express")' in content or "from \"express\"" in content:
+                has_express = True
+                backend_framework = backend_framework or "express"
+
     if not counts:
         return {}
-    top_lang = max(counts, key=counts.get)
-    return {"runtime": _LANG_TO_RUNTIME.get(top_lang, top_lang)}
+
+    # Primary runtime: prefer a real backend over a file-count majority.
+    if has_python:
+        runtime = "python"
+    elif has_express:
+        runtime = "node"
+    else:
+        top_lang = max(counts, key=counts.get)
+        runtime = _LANG_TO_RUNTIME.get(top_lang, top_lang)
+
+    ts: Dict[str, Any] = {"runtime": runtime}
+    if backend_framework:
+        ts["framework"] = backend_framework
+    if frontend_framework:
+        ts["frontend"] = {"present": True, "framework": frontend_framework}
+        # full-stack = a backend AND a frontend both present
+        ts["full_stack"] = has_python or bool(backend_framework)
+    return ts

@@ -155,13 +155,16 @@ class TestFileImpact(BaseModel):
     def _norm_type(cls, v: Any) -> str:
         t = str(v or "").strip().lower()
         for key, label in (
-            ("unit", "Unit Test"),
+            ("api", "API/Contract Test"),
+            ("contract", "API/Contract Test"),
+            ("component", "Component Test"),
             ("integration", "Integration Test"),
             ("e2e", "E2E Test"),
             ("end-to-end", "E2E Test"),
             ("end to end", "E2E Test"),
             ("performance", "Performance Test"),
             ("load", "Load Test"),
+            ("unit", "Unit Test"),
         ):
             if key in t:
                 return label
@@ -212,33 +215,50 @@ You are given (1) a CODEBASE MAP of source symbols (functions/methods/classes,
 their signatures and internal call edges) and (2) a list of REQUIREMENTS with
 acceptance criteria.
 
-Your job: decide WHAT to test and WHERE — a strategy, not concrete test inputs.
-For each area that needs testing, name a target test file, the test type, which
-source symbols and which requirement ids it covers, a priority, and why.
+Think like a senior test engineer writing a REQUIREMENT-FIRST test plan — a
+strategy (what/where/what-kind/priority), not concrete inputs.
 
-CRITICAL RULES:
-- Base the strategy on the requirements. Use the codebase map only to know
-  which symbols implement each requirement and how to reach them.
-- Do NOT invent source symbols that are not in the codebase map.
-- Every requirement should be covered by at least one entry (or explicitly
-  called out as a coverage gap).
-- Do NOT produce concrete input/expected values here — that is a later step.
+PROCESS — work requirement by requirement:
+- For EACH requirement, find the symbol(s) that implement it in the CODEBASE MAP
+  (match by route/name/behavior), then create one or more strategy entries.
+- A single requirement often needs MORE THAN ONE entry (e.g. an API/Contract
+  test for the endpoint AND an Integration test for the end-to-end behavior).
+- In `what_needs_testing`, name the scenarios to cover: happy path, boundary/
+  limit values, invalid input, error/negative paths, and security where relevant
+  — but do NOT write concrete input/expected values (that is a later step).
 
-PRIORITIZATION (F3): the map lists fan_in per symbol (how many callers it has =
-blast radius) and a HOTSPOTS list of the highest-fan_in symbols. Treat high
-fan_in symbols as higher risk and lean toward HIGH priority for them.
+CLASSIFY test_type from the symbol's signals (choose the closest fit):
+- Symbol flagged [ENDPOINT <METHOD> <route>]  -> "API/Contract Test": exercise the
+  route through the app's in-process test client; assert status codes + response
+  body/shape. This is the DEFAULT for HTTP endpoints — do NOT call these "Unit".
+- Behavior spanning >=2 symbols or shared/persistent state (e.g. lockout across
+  repeated logins, cart -> checkout, order status sequence, anything [DB/IO])
+  -> "Integration Test".
+- Pure function/helper, no endpoint, no shared state -> "Unit Test".
+- Front-end UI component (jsdom) -> "Component Test".
+- Only a genuine end-to-end user journey -> "E2E Test".
+- Use "Performance Test"/"Load Test" only when a requirement explicitly demands it.
 
-TECHNIQUE (F4): pick test_type using the TECH STACK and the per-symbol flags.
-Symbols flagged [DB/IO] touch persistence/external I/O — cover them with an
-Integration Test using the stated DB harness. Pure-logic symbols get Unit Tests.
-Prefer the named TESTING TOOLS in what_needs_testing where relevant.
+PRIORITIZE by risk (like a real tester):
+- HIGH: authentication/authorization, payments/money, state-machine transitions,
+  security, and boundary/limit logic; also high fan_in symbols (see HOTSPOTS).
+- MEDIUM: core create/read/update behavior.
+- LOW: read-only listings and low-impact admin conveniences.
+- A symbol with a non-empty `raises:` list MUST get explicit error/negative-path
+  coverage — mention it in `what_needs_testing`.
+
+GROUNDING:
+- `target_symbols` must be ids taken from the CODEBASE MAP; do NOT invent symbols.
+- Every requirement gets >=1 entry, or is explicitly named as a coverage gap in
+  `test_coverage_impact`.
+- Prefer the named TESTING TOOLS (see TECH STACK) in `what_needs_testing`.
 
 OUTPUT: STRICT JSON only, no prose, no markdown, matching this schema:
 {
   "test_files_impacted": [
     {
       "test_file_path": "string",
-      "test_type": "Unit Test | Integration Test | E2E Test | Performance Test | Load Test",
+      "test_type": "Unit Test | API/Contract Test | Integration Test | Component Test | E2E Test | Performance Test | Load Test",
       "what_needs_testing": "string",
       "existing_or_new": "New - needs creation | Existing - needs update",
       "priority": "HIGH | MEDIUM | LOW",
@@ -313,9 +333,12 @@ def _format_mapping_tree(mapping_tree: Dict[str, Any], max_symbols: int = 200) -
             break
         calls = node.get("calls", []) or []
         ext = node.get("external_calls", []) or []
+        raises = node.get("raises", []) or []
         flags = []
         if node.get("is_test"):
             flags.append("TEST FILE")
+        if node.get("is_endpoint"):
+            flags.append(f"ENDPOINT {node.get('http_method') or ''} {node.get('route') or ''}".strip())
         if _touches_db(ext):
             flags.append("DB/IO")
         flag = f"  [{', '.join(flags)}]" if flags else ""
@@ -324,6 +347,7 @@ def _format_mapping_tree(mapping_tree: Dict[str, Any], max_symbols: int = 200) -
             f"- {sid}{flag}\n"
             f"    signature: {sig}\n"
             f"    fan_in: {_fan_in(node)}\n"
+            f"    raises: {', '.join(raises) or '-'}\n"
             f"    calls(internal): {', '.join(calls) or '-'}\n"
             f"    calls(external): {', '.join(ext) or '-'}"
         )
@@ -351,10 +375,23 @@ def _build_messages(
     stack_desc, tool, db_note = _tech_guide(tech_stack)          # F4
     hotspots = _hotspots(mapping_tree)                           # F3
     hotspots_block = "\n".join(hotspots) if hotspots else "(none — shallow call graph)"
+
+    frontend = (tech_stack or {}).get("frontend") or {}
+    fs_note = ""
+    if isinstance(frontend, dict) and frontend.get("present"):
+        fe = frontend.get("framework", "frontend")
+        fs_note = (
+            f"\nFULL-STACK: this app also has a {fe} frontend. You MUST also plan "
+            "frontend coverage — Component Test entries for the frontend "
+            "pages/components (the .jsx/.tsx symbols in the map) and at least one "
+            "E2E Test for the primary user journey. Do not plan the backend only.\n"
+        )
+
     user = (
         f"TECH STACK: {stack_desc}\n"
         f"TESTING TOOLS: {tool}\n"
-        f"DB HARNESS: {db_note}\n\n"
+        f"DB HARNESS: {db_note}\n"
+        f"{fs_note}\n"
         "HOTSPOTS (highest blast radius — prioritize):\n"
         f"{hotspots_block}\n\n"
         "CODEBASE MAP (symbols flagged [DB/IO] touch persistence/external I/O):\n"

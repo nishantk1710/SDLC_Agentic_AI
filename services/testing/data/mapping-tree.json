@@ -1,0 +1,1144 @@
+{
+  "schema_version": "1.0",
+  "symbols": {
+    "quickbite/backend/app/main.py::register": {
+      "symbol_id": "quickbite/backend/app/main.py::register",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "register(payload: dict)",
+      "start_line": 47,
+      "end_line": 62,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/auth/register",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [
+        "quickbite/backend/app/main.py::_hash_password"
+      ],
+      "called_by": [
+        "quickbite/frontend/src/pages/Signup.jsx::Signup"
+      ],
+      "external_calls": [
+        "get",
+        "len"
+      ],
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "quickbite/backend/app/main.py::_hash_password": {
+      "symbol_id": "quickbite/backend/app/main.py::_hash_password",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "_hash_password(password: str)",
+      "start_line": 65,
+      "end_line": 68,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [
+        "quickbite/backend/app/main.py::register"
+      ],
+      "external_calls": [
+        "token_hex",
+        "hexdigest",
+        "sha256",
+        "encode"
+      ],
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::login": {
+      "symbol_id": "quickbite/backend/app/main.py::login",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "login(payload: dict, request: Request)",
+      "start_line": 75,
+      "end_line": 98,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/auth/login",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get",
+        "next",
+        "values",
+        "add",
+        "token_hex"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::reset_password": {
+      "symbol_id": "quickbite/backend/app/main.py::reset_password",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "reset_password(payload: dict)",
+      "start_line": 108,
+      "end_line": 118,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/auth/reset-password",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get",
+        "utcnow"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::create_address": {
+      "symbol_id": "quickbite/backend/app/main.py::create_address",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "create_address(payload: dict)",
+      "start_line": 125,
+      "end_line": 128,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/addresses",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "len"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::list_addresses": {
+      "symbol_id": "quickbite/backend/app/main.py::list_addresses",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "list_addresses()",
+      "start_line": 132,
+      "end_line": 133,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/addresses",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "list",
+        "values"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::admin_list_users": {
+      "symbol_id": "quickbite/backend/app/main.py::admin_list_users",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "admin_list_users(role: str='customer')",
+      "start_line": 140,
+      "end_line": 143,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/admin/users",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "list",
+        "values"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::list_restaurants": {
+      "symbol_id": "quickbite/backend/app/main.py::list_restaurants",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "list_restaurants(sort_by: str=None)",
+      "start_line": 150,
+      "end_line": 156,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/restaurants",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "values",
+        "sort"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::get_restaurant": {
+      "symbol_id": "quickbite/backend/app/main.py::get_restaurant",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "get_restaurant(restaurant_id: str)",
+      "start_line": 160,
+      "end_line": 164,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/restaurants/{restaurant_id}",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::search": {
+      "symbol_id": "quickbite/backend/app/main.py::search",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "search(query: str='')",
+      "start_line": 168,
+      "end_line": 172,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/search",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "values",
+        "lower"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::get_menu_item": {
+      "symbol_id": "quickbite/backend/app/main.py::get_menu_item",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "get_menu_item(item_id: str)",
+      "start_line": 179,
+      "end_line": 183,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/menu-items/{item_id}",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::add_to_cart": {
+      "symbol_id": "quickbite/backend/app/main.py::add_to_cart",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "add_to_cart(payload: dict, customer_id: str='demo-customer')",
+      "start_line": 190,
+      "end_line": 202,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/cart/items",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get",
+        "setdefault",
+        "append"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::_cart_subtotal": {
+      "symbol_id": "quickbite/backend/app/main.py::_cart_subtotal",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "_cart_subtotal(customer_id: str)",
+      "start_line": 205,
+      "end_line": 212,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [
+        "quickbite/backend/app/main.py::checkout"
+      ],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::checkout": {
+      "symbol_id": "quickbite/backend/app/main.py::checkout",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "checkout(payload: dict, customer_id: str='demo-customer')",
+      "start_line": 219,
+      "end_line": 235,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/checkout",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [
+        "quickbite/backend/app/main.py::_cart_subtotal"
+      ],
+      "called_by": [
+        "quickbite/frontend/src/pages/Checkout.jsx::Checkout"
+      ],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "quickbite/backend/app/main.py::confirm_order": {
+      "symbol_id": "quickbite/backend/app/main.py::confirm_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "confirm_order(payload: dict)",
+      "start_line": 242,
+      "end_line": 246,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/orders/confirm",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "len",
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::cancel_order": {
+      "symbol_id": "quickbite/backend/app/main.py::cancel_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "cancel_order(order_id: str)",
+      "start_line": 250,
+      "end_line": 254,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/orders/{order_id}/cancel",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::make_payment": {
+      "symbol_id": "quickbite/backend/app/main.py::make_payment",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "make_payment(payload: dict)",
+      "start_line": 261,
+      "end_line": 272,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/payments",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get",
+        "hexdigest",
+        "sha256",
+        "encode"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::get_payment": {
+      "symbol_id": "quickbite/backend/app/main.py::get_payment",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "get_payment(order_id: str)",
+      "start_line": 276,
+      "end_line": 278,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/orders/{order_id}/payment",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::assign_delivery_agent": {
+      "symbol_id": "quickbite/backend/app/main.py::assign_delivery_agent",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "assign_delivery_agent(agents_available: list)",
+      "start_line": 284,
+      "end_line": 286,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "min"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::accept_job": {
+      "symbol_id": "quickbite/backend/app/main.py::accept_job",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "accept_job(job_id: str)",
+      "start_line": 293,
+      "end_line": 294,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/delivery-jobs/{job_id}/accept",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::decline_job": {
+      "symbol_id": "quickbite/backend/app/main.py::decline_job",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "decline_job(job_id: str)",
+      "start_line": 298,
+      "end_line": 299,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/delivery-jobs/{job_id}/decline",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::order_status_transition": {
+      "symbol_id": "quickbite/backend/app/main.py::order_status_transition",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "order_status_transition(current_status: str, next_status: str)",
+      "start_line": 305,
+      "end_line": 311,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "index"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::tracking": {
+      "symbol_id": "quickbite/backend/app/main.py::tracking",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "tracking(order_id: str)",
+      "start_line": 318,
+      "end_line": 319,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/orders/{order_id}/tracking",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::deliver_order": {
+      "symbol_id": "quickbite/backend/app/main.py::deliver_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "deliver_order(order_id: str, payload: dict=None)",
+      "start_line": 323,
+      "end_line": 328,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/orders/{order_id}/deliver",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::submit_review": {
+      "symbol_id": "quickbite/backend/app/main.py::submit_review",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "submit_review(order_id: str, payload: dict)",
+      "start_line": 335,
+      "end_line": 342,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/orders/{order_id}/review",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::recompute_average_rating": {
+      "symbol_id": "quickbite/backend/app/main.py::recompute_average_rating",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "recompute_average_rating(existing_ratings: list, new_rating: int)",
+      "start_line": 345,
+      "end_line": 347,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "round",
+        "sum",
+        "len"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::remove_review": {
+      "symbol_id": "quickbite/backend/app/main.py::remove_review",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "remove_review(review_id: str, role: str='customer')",
+      "start_line": 354,
+      "end_line": 358,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "DELETE",
+      "route": "/api/admin/reviews/{review_id}",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "pop"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::create_menu_item": {
+      "symbol_id": "quickbite/backend/app/main.py::create_menu_item",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "create_menu_item(payload: dict)",
+      "start_line": 365,
+      "end_line": 368,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/restaurant/menu-items",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "len"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::set_restaurant_status": {
+      "symbol_id": "quickbite/backend/app/main.py::set_restaurant_status",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "set_restaurant_status(payload: dict, restaurant_id: str='rest-1')",
+      "start_line": 372,
+      "end_line": 374,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "PATCH",
+      "route": "/api/restaurant/status",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::set_item_availability": {
+      "symbol_id": "quickbite/backend/app/main.py::set_item_availability",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "set_item_availability(item_id: str, payload: dict)",
+      "start_line": 378,
+      "end_line": 381,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "PATCH",
+      "route": "/api/restaurant/menu-items/{item_id}/availability",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::accept_order": {
+      "symbol_id": "quickbite/backend/app/main.py::accept_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "accept_order(order_id: str)",
+      "start_line": 388,
+      "end_line": 389,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/restaurant/orders/{order_id}/accept",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::advance_order": {
+      "symbol_id": "quickbite/backend/app/main.py::advance_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "advance_order(order_id: str, payload: dict)",
+      "start_line": 393,
+      "end_line": 394,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/restaurant/orders/{order_id}/advance",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::reject_order": {
+      "symbol_id": "quickbite/backend/app/main.py::reject_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "reject_order(order_id: str, payload: dict)",
+      "start_line": 398,
+      "end_line": 402,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/restaurant/orders/{order_id}/reject",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::onboard_partner": {
+      "symbol_id": "quickbite/backend/app/main.py::onboard_partner",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "onboard_partner(partner_id: str)",
+      "start_line": 409,
+      "end_line": 410,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/admin/partners/{partner_id}/onboard",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::suspend_agent": {
+      "symbol_id": "quickbite/backend/app/main.py::suspend_agent",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "suspend_agent(agent_id: str)",
+      "start_line": 414,
+      "end_line": 415,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/admin/agents/{agent_id}/suspend",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::reactivate_partner": {
+      "symbol_id": "quickbite/backend/app/main.py::reactivate_partner",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "reactivate_partner(partner_id: str)",
+      "start_line": 419,
+      "end_line": 420,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/admin/partners/{partner_id}/reactivate",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::admin_search_orders": {
+      "symbol_id": "quickbite/backend/app/main.py::admin_search_orders",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "admin_search_orders(query: str='')",
+      "start_line": 424,
+      "end_line": 425,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/api/admin/orders",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "list",
+        "values"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::resolve_dispute": {
+      "symbol_id": "quickbite/backend/app/main.py::resolve_dispute",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "resolve_dispute(dispute_id: str, payload: dict)",
+      "start_line": 429,
+      "end_line": 431,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "POST",
+      "route": "/api/admin/disputes/{dispute_id}/resolve",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "get"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::update_platform_config": {
+      "symbol_id": "quickbite/backend/app/main.py::update_platform_config",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "update_platform_config(payload: dict)",
+      "start_line": 438,
+      "end_line": 442,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "PATCH",
+      "route": "/api/admin/platform-config",
+      "raises": [
+        "HTTPException"
+      ],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "update"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::notify_customer_on_status_change": {
+      "symbol_id": "quickbite/backend/app/main.py::notify_customer_on_status_change",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "notify_customer_on_status_change(status_change: str)",
+      "start_line": 448,
+      "end_line": 449,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::notify_manager_new_order": {
+      "symbol_id": "quickbite/backend/app/main.py::notify_manager_new_order",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "notify_manager_new_order(new_order_created: bool)",
+      "start_line": 452,
+      "end_line": 453,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/backend/app/main.py::health": {
+      "symbol_id": "quickbite/backend/app/main.py::health",
+      "filename": "quickbite/backend/app/main.py",
+      "language": "python",
+      "symbol_type": "function",
+      "signature": "health()",
+      "start_line": 457,
+      "end_line": 458,
+      "is_test": false,
+      "is_endpoint": true,
+      "http_method": "GET",
+      "route": "/health",
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/api/client.js::request": {
+      "symbol_id": "quickbite/frontend/src/api/client.js::request",
+      "filename": "quickbite/frontend/src/api/client.js",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "request(method, path, body)",
+      "start_line": 7,
+      "end_line": 21,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "fetch",
+        "stringify",
+        "catch",
+        "json"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/App.jsx::TopNav": {
+      "symbol_id": "quickbite/frontend/src/App.jsx::TopNav",
+      "filename": "quickbite/frontend/src/App.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "TopNav()",
+      "start_line": 9,
+      "end_line": 18,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/App.jsx::App": {
+      "symbol_id": "quickbite/frontend/src/App.jsx::App",
+      "filename": "quickbite/frontend/src/App.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "App()",
+      "start_line": 20,
+      "end_line": 34,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/pages/Checkout.jsx::Checkout": {
+      "symbol_id": "quickbite/frontend/src/pages/Checkout.jsx::Checkout",
+      "filename": "quickbite/frontend/src/pages/Checkout.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "Checkout()",
+      "start_line": 5,
+      "end_line": 30,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [
+        "quickbite/backend/app/main.py::checkout"
+      ],
+      "called_by": [],
+      "external_calls": [
+        "useState",
+        "useNavigate",
+        "setError",
+        "confirmOrder",
+        "navigate"
+      ],
+      "fan_in": 0,
+      "fan_out": 1
+    },
+    "quickbite/frontend/src/pages/OrderConfirmation.jsx::OrderConfirmation": {
+      "symbol_id": "quickbite/frontend/src/pages/OrderConfirmation.jsx::OrderConfirmation",
+      "filename": "quickbite/frontend/src/pages/OrderConfirmation.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "OrderConfirmation()",
+      "start_line": 1,
+      "end_line": 8,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/pages/RestaurantMenu.jsx::RestaurantMenu": {
+      "symbol_id": "quickbite/frontend/src/pages/RestaurantMenu.jsx::RestaurantMenu",
+      "filename": "quickbite/frontend/src/pages/RestaurantMenu.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "RestaurantMenu()",
+      "start_line": 5,
+      "end_line": 32,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "useParams",
+        "useState",
+        "useNavigate",
+        "useEffect",
+        "catch",
+        "then",
+        "getRestaurant",
+        "setRestaurant",
+        "addToCart",
+        "navigate"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/pages/Restaurants.jsx::Restaurants": {
+      "symbol_id": "quickbite/frontend/src/pages/Restaurants.jsx::Restaurants",
+      "filename": "quickbite/frontend/src/pages/Restaurants.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "Restaurants()",
+      "start_line": 5,
+      "end_line": 32,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [],
+      "called_by": [],
+      "external_calls": [
+        "useState",
+        "useEffect",
+        "catch",
+        "then",
+        "listRestaurants",
+        "setRestaurants",
+        "map"
+      ],
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "quickbite/frontend/src/pages/Signup.jsx::Signup": {
+      "symbol_id": "quickbite/frontend/src/pages/Signup.jsx::Signup",
+      "filename": "quickbite/frontend/src/pages/Signup.jsx",
+      "language": "javascript",
+      "symbol_type": "function",
+      "signature": "Signup()",
+      "start_line": 5,
+      "end_line": 47,
+      "is_test": false,
+      "is_endpoint": false,
+      "http_method": null,
+      "route": null,
+      "raises": [],
+      "calls": [
+        "quickbite/backend/app/main.py::register"
+      ],
+      "called_by": [],
+      "external_calls": [
+        "useState",
+        "useNavigate",
+        "preventDefault",
+        "setError",
+        "navigate",
+        "setEmail",
+        "setPassword"
+      ],
+      "fan_in": 0,
+      "fan_out": 1
+    }
+  },
+  "edges": [
+    {
+      "from": "quickbite/backend/app/main.py::register",
+      "to": "quickbite/backend/app/main.py::_hash_password"
+    },
+    {
+      "from": "quickbite/backend/app/main.py::checkout",
+      "to": "quickbite/backend/app/main.py::_cart_subtotal"
+    },
+    {
+      "from": "quickbite/frontend/src/pages/Checkout.jsx::Checkout",
+      "to": "quickbite/backend/app/main.py::checkout"
+    },
+    {
+      "from": "quickbite/frontend/src/pages/Signup.jsx::Signup",
+      "to": "quickbite/backend/app/main.py::register"
+    }
+  ],
+  "stats": {
+    "symbol_count": 50,
+    "edge_count": 4,
+    "file_count": 8
+  }
+}
