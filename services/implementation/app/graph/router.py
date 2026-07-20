@@ -16,8 +16,13 @@ REPAIR_CAP = 3
 
 
 def route_after_select(state: WorkflowState) -> str:
-    """After selecting: generate code for the picked item, or finish when the plan is exhausted."""
-    return "code_generator" if state.get("current_work_item") is not None else END
+    """After selecting: generate the picked item, or run the final review when the plan is done.
+
+    The plan-exhausted path leads to ``code_review`` (runs ONCE over the whole repo) before the
+    graph ends. The escalation path (a failed item → human_review) bypasses this entirely, so the
+    review only runs on a clean completion.
+    """
+    return "code_generator" if state.get("current_work_item") is not None else "code_review"
 
 
 def route_after_codegen(state: WorkflowState) -> str:

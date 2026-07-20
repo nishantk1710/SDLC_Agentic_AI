@@ -23,7 +23,11 @@ class LLMGateway:
         settings = get_settings()
         self._model = settings.llm_model
         self._max_tokens = settings.llm_max_tokens
-        self._api_key = settings.anthropic_api_key or None
+        # Prefer the Foundry proxy credentials when present, else the public API.
+        self._api_key = (
+            settings.anthropic_foundry_api_key or settings.anthropic_api_key or None
+        )
+        self._base_url = settings.anthropic_foundry_base_url or None
         self._use_thinking = settings.llm_thinking
         # Build the client lazily (see _get_client). The Anthropic SDK raises
         # at construction if no key is resolvable, so constructing it here would
@@ -34,7 +38,11 @@ class LLMGateway:
     def _get_client(self) -> anthropic.Anthropic:
         """Create the Anthropic client on first use."""
         if self._client is None:
-            self._client = anthropic.Anthropic(api_key=self._api_key)
+            kwargs: dict = {"api_key": self._api_key}
+            # Route to the Foundry proxy when a base URL is configured.
+            if self._base_url:
+                kwargs["base_url"] = self._base_url
+            self._client = anthropic.Anthropic(**kwargs)
         return self._client
 
     def complete(

@@ -3,9 +3,10 @@
 Loops over the plan's work items; for each: generate → fixed gate → (commit | repair→gate |
 escalate→HITL). The fixed gate is the router; the local repair cap lives in router.py.
 
-    select ─▶ code_generator ─▶ gate ─┬─ all pass ───────────▶ commit ─▶ select (next / done)
-       ▲                              ├─ fail & repair<CAP ──▶ repair ─▶ gate
-       └────────── commit             └─ fail & repair>=CAP ─▶ escalate ─▶ human_review (interrupt)
+    select ─┬─ next item ─▶ code_generator ─▶ gate ─┬─ all pass ──────▶ commit ─▶ select
+       ▲     │                                       ├─ fail & repair<CAP ─▶ repair ─▶ gate
+       └── commit                                    └─ fail & repair>=CAP ─▶ escalate ─▶ human_review
+             └─ plan exhausted ─▶ code_review ─▶ END   (clone→lint→sonar→report, runs ONCE)
 
 Compiled with a checkpointer so the human-review interrupt() can pause the run for HITL.
 """
@@ -32,9 +33,12 @@ def build_graph():
     graph.add_node("repair", repair_node)
     graph.add_node("escalate", nodes.escalate_node)
     graph.add_node("human_review", nodes.human_review_node)
+    graph.add_node("code_review", nodes.code_review_node)
 
     graph.add_edge(START, "select")
-    graph.add_conditional_edges("select", route_after_select, {"code_generator": "code_generator", END: END})
+    graph.add_conditional_edges(
+        "select", route_after_select, {"code_generator": "code_generator", "code_review": "code_review"}
+    )
     graph.add_conditional_edges(
         "code_generator", route_after_codegen, {"gate": "gate", "escalate": "escalate"}
     )
@@ -45,6 +49,7 @@ def build_graph():
     graph.add_edge("repair", "gate")        # repair → back to the fixed gate
     graph.add_edge("escalate", "human_review")
     graph.add_edge("human_review", END)
+    graph.add_edge("code_review", END)      # final review (clone → static analysis → report) → done
 
     # Checkpointer enables the human_review interrupt() to pause/resume (HITL).
     return graph.compile(checkpointer=MemorySaver())

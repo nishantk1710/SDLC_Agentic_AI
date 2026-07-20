@@ -42,6 +42,15 @@ class WorkflowState(TypedDict, total=False):
     # name. Values are the artifact content (str) or parsed structures. Schema = 27 inputs, TBD.
     design_package: dict[str, Any]
 
+    # The public GitHub URL of the generated project. Produced by Code Generation and consumed by
+    # Code Review, which clones it into an ephemeral sandbox for static analysis.
+    repo_url: str
+    # Git working model: all phases operate on ONE working branch (default "dev"); dev is merged
+    # to main only AFTER the Security scan passes (final step). ``branch`` is the working branch;
+    # ``commit_sha`` is the exact commit reviewed/refactored (pinned by Code Review for audit).
+    branch: str
+    commit_sha: str
+
     # --- Code Generation (IMP-001) internals ---
     work_items: list[WorkItem]            # design package decomposed into units of work
     work_item_index: int                  # graph cursor: index of the NEXT item to select
@@ -54,7 +63,9 @@ class WorkflowState(TypedDict, total=False):
     generation_metrics: dict[str, Any]    # run-level metrics (generation-metrics.json shape)
 
     # --- Downstream pipeline agent outputs (each agent writes only its own) ---
-    review_report: str
+    review_report: str          # Code Review: the Markdown report content
+    review_report_path: str     # Code Review: where the report .md was saved (reports/…)
+    review_findings_path: str   # Code Review: the normalized verified-findings JSON (for Refactoring)
     refactored_code: str
     unit_tests: str
     documentation: str

@@ -54,7 +54,7 @@ def test_fail_once_then_pass_repairs_once_and_commits_once() -> None:
     assert executor.commits == [                          # committed exactly once, on all-pass
         ("p1", "IMP-001 WI-001: p1/app/api/login.py")
     ]
-    assert final["workflow_status"] == "completed"        # plan exhausted after the single item
+    assert final["workflow_status"] == "code_reviewed"    # plan exhausted -> final review ran
     assert final["attempt"] == 7                          # orchestrator's counter echoed unchanged
     # the repair's proposed content was written back through the executor
     assert executor.files["p1/app/api/login.py"] == "# v2 fixed\n"
